@@ -101,13 +101,12 @@ mod_Inputs_ui <- function(id){
                                     style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
                    )
                  ),
-                 fluidRow(box(width = 12, 
-                              title = 'ACP plot', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
-                              plotlyOutput(ns("acpplot"))
-                              )
-                          ),
-                 fluidRow(box(width = 12, 
-                              title = 'ACP plot', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+                 fluidRow(box(width = 6, 
+                              title = 'ACP plot individuals', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+                              plotlyOutput(ns("acpplot"), height = "500")
+                              ),
+                          box(width = 6, 
+                              title = 'ACP plot variables', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
                               plotOutput(ns("acpplotvar"), height = "500")
                               )
                           ),
@@ -322,7 +321,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       print(input$fact1)
       p = ggplot(acptab(), aes_string(x = input$pc1, y =
                                         input$pc2, color = input$fact1, sampleID = "sample.id")) + 
-        geom_point() + stat_ellipse(aes_string(x = input$pc1, y = input$pc2, color = input$fact1), inherit.aes = FALSE)  # pb type aes_string...
+        geom_point() + stat_ellipse(aes_string(x = input$pc1, y = input$pc2, color = input$fact1), inherit.aes = FALSE) + theme_bw()
       ggplotly(p, tooltip=c("x", "y", "sampleID"))
     })
       
