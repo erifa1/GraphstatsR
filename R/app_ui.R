@@ -26,7 +26,8 @@ https://twitter.com", target="_blank"))
                     sidebarMenu(
                       id="tabs",
                       style = "position: fixed; overflow: visible",
-                      menuItem("Input Data", tabName= 'data_loading', icon=icon("diagnoses"))
+                      menuItem("Easy Stats", tabName= 'easystats', icon=icon("diagnoses")),
+                      menuItem("IDMS choice", tabName= 'idmschoice', icon=icon("diagnoses"))
                       # menuItem("Community Composition", tabName = "tab_compo", icon = icon("chart-pie"))
                     )
                   ),
@@ -34,8 +35,11 @@ https://twitter.com", target="_blank"))
                   dashboardBody(
                     
                     tabItems(
-                      tabItem(tabName = 'data_loading',
+                      tabItem(tabName = 'easystats',
                               mod_Inputs_ui("Inputs_ui_1")
+                      ),
+                      tabItem(tabName = 'idmschoice',
+                              mod_idmschoice_ui("idmschoice_ui_1")
                       )
                     )
                   )

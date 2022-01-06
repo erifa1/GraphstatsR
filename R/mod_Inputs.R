@@ -13,6 +13,7 @@
 #' @importFrom plotly renderPlotly
 #' @importFrom plotly ggplotly
 #' @importFrom plotly config
+#' @importFrom factoextra fviz_pca_var
 #' @import ggplot2
 #' @import DT
 
@@ -86,20 +87,35 @@ mod_Inputs_ui <- function(id){
                          label = "Factor to color samples in PCA:",
                          choices = ""
                        ),
+                       fluidRow(
+                         column(3,
+                                selectInput(ns("pc1"),
+                                            label = "Component on X axis:",
+                                            choices = "")), 
+                         column(3,
+                                selectInput(ns("pc2"),
+                                            label = "Component on Y axis:",
+                                            choices = ""))
+                       ),
                        actionButton(ns("go1"), "Plot ACP", icon = icon("play-circle"),
                                     style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
                    )
                  ),
                  fluidRow(box(width = 12, 
-                              title = 'ACP table', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
-                              DT::dataTableOutput(ns("prevacp1"))
+                              title = 'ACP plot', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+                              plotlyOutput(ns("acpplot"))
                               )
                           ),
                  fluidRow(box(width = 12, 
                               title = 'ACP plot', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
-                              plotlyOutput(ns("acpplot"))
+                              plotOutput(ns("acpplotvar"), height = "500")
                               )
-                          )
+                          ),
+                 fluidRow(box(width = 12, 
+                              title = 'ACP table', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+                              DT::dataTableOutput(ns("prevacp1"))
+                              )
+                 )
         ),
         tabPanel("Boxplots",
                  fluidRow()
@@ -267,18 +283,28 @@ mod_Inputs_server <- function(id, r = r, session = session){
       updateSelectInput(session, "fact1",
                         choices = names(metadata1()),
                         selected = names(metadata1())[1])
+      updateSelectInput(session, "pc1",
+                        choices = colnames(acp1()$x)[1:10],
+                        selected = colnames(acp1()$x)[1])
+      updateSelectInput(session, "pc2",
+                        choices = colnames(acp1()$x)[1:10],
+                        selected = colnames(acp1()$x)[1])
     })
     
       
-    acptab <- reactive({
+    acp1 <- reactive({
       req(r_values$normds1, r_values$mt1)
       # print(head(normds1()))
       # print(str(normds1()))
       acp1 = stats::prcomp(na.omit(t(normds1()[,-1])), scale. = TRUE)
-      
       r_values$acp1 <- acp1
       
-      acptab= as.data.frame(acp1$x) %>% tibble::rownames_to_column(var = "sample.id") %>% 
+      print(colnames(r_values$acp1$x))
+      acp1
+    })
+      
+    acptab <- reactive({      
+      acptab= as.data.frame(acp1()$x) %>% tibble::rownames_to_column(var = "sample.id") %>% 
         dplyr::inner_join(x = metadata1(), by = "sample.id")
       acptab
 
@@ -290,16 +316,13 @@ mod_Inputs_server <- function(id, r = r, session = session){
     }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE) 
     
     acpplot <- eventReactive(input$go1, {
-      req(input$fact1, acptab())
+      req(input$fact1, acptab(), input$pc1, input$pc2)
     # acpplot <- reactive({
-      print("coucou")
-      print(input$fact1)
-      
       cat(file=stderr(), 'ACP plot', "\n")
-      print("coucou2")
-      p = ggplot(acptab(), aes(x = PC1, y =
-                               PC2, color = input$fact1, sampleID = sample.id)) + 
-        geom_point() + stat_ellipse(aes(x = PC1, y = PC2, color = input$fact1), inherit.aes = FALSE)  # pb type aes_string...
+      print(input$fact1)
+      p = ggplot(acptab(), aes_string(x = input$pc1, y =
+                                        input$pc2, color = input$fact1, sampleID = "sample.id")) + 
+        geom_point() + stat_ellipse(aes_string(x = input$pc1, y = input$pc2, color = input$fact1), inherit.aes = FALSE)  # pb type aes_string...
       ggplotly(p, tooltip=c("x", "y", "sampleID"))
     })
       
@@ -307,6 +330,22 @@ mod_Inputs_server <- function(id, r = r, session = session){
       req(acpplot())
       acpplot() %>% config(toImageButtonOptions = list(format = "svg"))
     })
+    
+    acpplotvar <- eventReactive(input$go1, {
+      req(acp1(), input$pc1, input$pc2)
+      pc1 = as.numeric(substring(input$pc1, 3, 10))
+      pc2 = as.numeric(substring(input$pc2, 3, 10))
+      print(c(pc1, pc2))
+      plotvar  <- factoextra::fviz_pca_var(acp1(), repel = TRUE, axes = c(pc1, pc2))
+      print(class(plotvar))
+      plotvar
+    })
+    
+    output$acpplotvar <- renderPlot({
+      req(acpplotvar())
+      acpplotvar()
+    })
+
  
   })
 }
