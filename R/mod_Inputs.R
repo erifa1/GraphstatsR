@@ -55,6 +55,13 @@ mod_Inputs_ui <- function(id){
                   )
                 ),
               fluidRow(
+                box(width=12,
+                    title = 'Dataset filters', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+                    DT::dataTableOutput(ns("metabo_datatable")),
+                    shinyBS::bsButton(inputId = ns('update_features'), label = "Update features filter", block = F, style = 'danger', type='action')
+                )
+              ),
+              fluidRow(
                 box(
                   title = 'Normalization options', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
                   radioButtons(
@@ -74,6 +81,7 @@ mod_Inputs_ui <- function(id){
               box(width=12,
                 title = 'Merged Table preview', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
                 DT::dataTableOutput(ns("mergedf_DT")),
+                shinyBS::bsButton(inputId = ns('update_samples'), label = "Update samples filter", block = F, style = 'danger', type='action'),
                 downloadButton(outputId = ns("mergedf_download"), label = "Download merged table")
               )
             )
@@ -97,6 +105,8 @@ mod_Inputs_ui <- function(id){
                                             label = "Component on Y axis:",
                                             choices = ""))
                        ),
+                       actionButton(ns("go2"), "Run ACP", icon = icon("play-circle"),
+                                    style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
                        actionButton(ns("go1"), "Plot ACP", icon = icon("play-circle"),
                                     style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
                    )
@@ -181,17 +191,29 @@ mod_Inputs_server <- function(id, r = r, session = session){
       
     })
     
-    output$normds1 <- renderPrint({
-      cat(file = stderr(), 'rendering normds1', "\n")
-      if (is.null(metadata1())) {
-        print("no data")
-      } else if (ncol(metadata1()) > 6) {
-        head(metadata1()[, 1:6])
-      } else{
-        head(metadata1()[, 1:ncol(metadata1())])
-      }
+    output$metabo_datatable <- DT::renderDataTable({
+      req(dataset1())
+      cat(file=stderr(), 'Dataset datatable', "\n")
+      dataset1()
+    }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE) 
+    
+    subset_metabo <- reactive({
+      req(dataset1())
+      cat(file=stderr(), 'subset features...', "\n")
+      cat(file=stderr(), 'number of features before',nrow(dataset1()), "\n")
+      Fdataset <- dataset1()[input$metabo_datatable_rows_all,]
+      cat(file=stderr(), 'number of features after',nrow(Fdataset), "\n")
+      r_values$subsetds1 <- Fdataset
       
     })
+    
+    observeEvent(input$update_features, {
+      cat(file=stderr(), 'button update_features', "\n")
+      subset_metabo()
+      print(nrow(subset_metabo()))
+    },
+    ignoreNULL = TRUE, ignoreInit = TRUE)
+    
     
     
     output$mergedf <- renderPrint({
@@ -212,8 +234,11 @@ mod_Inputs_server <- function(id, r = r, session = session){
     },ignoreNULL = TRUE, ignoreInit = TRUE)
     
     normds1 <- reactive({
-      req(r_values$ds1, input$norm_method)
-      ds1 <- r_values$ds1
+      req(r_values$subsetds1, input$norm_method)
+      ds0 <- r_values$subsetds1
+      class1 <- sapply(ds0, class)
+      ds1 <- ds0[,class1 == "numeric"]
+      print(head(ds1))
       
       if(input$norm_method == 0){
         normds1 <- ds1
@@ -244,8 +269,8 @@ mod_Inputs_server <- function(id, r = r, session = session){
     output$mergedf_download <- downloadHandler(
       filename = "merged_table.csv",
       content = function(file) {
-        req(r_values$tabF)
-        write.table(r_values$tabF, file, sep="\t", row.names=FALSE)
+        req(r_values$subsetds_final)
+        write.table(r_values$subsetds_final, file, sep="\t", row.names=FALSE)
       }
     )
     
@@ -265,6 +290,30 @@ mod_Inputs_server <- function(id, r = r, session = session){
       mergedf()
     }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE)
     
+    subset_merged <- reactive({
+      req(mergedf())
+      cat(file=stderr(), 'subset samples ... ', "\n")
+      cat(file=stderr(), 'number of samples before',nrow(mergedf()), "\n")
+      Fdataset <- mergedf()[input$mergedf_DT_rows_all,]
+      cat(file=stderr(), 'number of samples after',nrow(Fdataset), "\n")
+      row.names(Fdataset) <- Fdataset[,1] # sample.id
+      r_values$subsetds_final <- Fdataset
+      
+      r_values$metadata_final <- droplevels(Fdataset[,1:ncol(metadata1())])
+      print(head(r_values$metadata_final))
+      r_values$features_final <- Fdataset[,(ncol(metadata1())+1):ncol(Fdataset)]
+      print(head(r_values$features_final))
+    })
+    
+    observeEvent(input$update_samples, {
+      cat(file=stderr(), 'button update_samples', "\n")
+      subset_merged()
+      print(nrow(subset_merged()))
+      print(str(subset_merged()))
+      print(str(r_values$metadata_final))
+    },
+    ignoreNULL = TRUE, ignoreInit = TRUE)
+    
     
     ### ACP tab
     
@@ -280,8 +329,8 @@ mod_Inputs_server <- function(id, r = r, session = session){
     observe({
       req(metadata1())
       updateSelectInput(session, "fact1",
-                        choices = names(metadata1()),
-                        selected = names(metadata1())[1])
+                        choices = names(r_values$metadata_final),
+                        selected = names(r_values$metadata_final)[1])
       updateSelectInput(session, "pc1",
                         choices = colnames(acp1()$x)[1:10],
                         selected = colnames(acp1()$x)[1])
@@ -291,20 +340,22 @@ mod_Inputs_server <- function(id, r = r, session = session){
     })
     
       
-    acp1 <- reactive({
-      req(r_values$normds1, r_values$mt1)
+    acp1 <- eventReactive(input$go2, {
+      cat(file=stderr(), 'ACP1 ... ', "\n")
+      req(r_values$normds1, r_values$mt1)  # r_values$metadata_final # r_values$features_final
       # print(head(normds1()))
       # print(str(normds1()))
-      acp1 = stats::prcomp(na.omit(t(normds1()[,-1])), scale. = TRUE)
+      acp1 = stats::prcomp(na.omit(r_values$features_final), scale. = TRUE)  #t(normds1()[,-1])
       r_values$acp1 <- acp1
       
       print(colnames(r_values$acp1$x))
       acp1
     })
       
-    acptab <- reactive({      
+    acptab <- reactive({
+      cat(file=stderr(), 'ACP tab ... ', "\n")
       acptab= as.data.frame(acp1()$x) %>% tibble::rownames_to_column(var = "sample.id") %>% 
-        dplyr::inner_join(x = metadata1(), by = "sample.id")
+        dplyr::inner_join(x = r_values$metadata_final, by = "sample.id")
       acptab
 
     })
