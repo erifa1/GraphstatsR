@@ -88,7 +88,20 @@ mod_Inputs_ui <- function(id){
         ),
         tabPanel("PCA",
                  fluidRow(
-                   box(title = "Settings:", width = 6, status = "warning", solidHeader = TRUE,
+                   box(title = "PCA options:", width = 6, status = "warning", solidHeader = TRUE,
+                       radioButtons(
+                         ns("naomit_method"),
+                         label = "Missing values (drop lines or columns with NA) : ",
+                         inline = TRUE,
+                         choices = list(
+                           "Samples based" = 0 ,
+                           "Features based" = 1
+                         ), selected = 0
+                       ),
+                       actionButton(ns("go2"), "Run ACP", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
+                       verbatimTextOutput(ns("naomitval"))
+                   ),
+                   box(title = "Plot Settings:", width = 6, status = "warning", solidHeader = TRUE,
                        # uiOutput(ns("factor1")),
                        selectInput(
                          ns("fact1"),
@@ -105,10 +118,7 @@ mod_Inputs_ui <- function(id){
                                             label = "Component on Y axis:",
                                             choices = ""))
                        ),
-                       actionButton(ns("go2"), "Run ACP", icon = icon("play-circle"),
-                                    style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
-                       actionButton(ns("go1"), "Plot ACP", icon = icon("play-circle"),
-                                    style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
+                       actionButton(ns("go1"), "Plot ACP", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
                    )
                  ),
                  fluidRow(box(width = 6, 
@@ -123,6 +133,11 @@ mod_Inputs_ui <- function(id){
                  fluidRow(box(width = 12, 
                               title = 'ACP table', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
                               DT::dataTableOutput(ns("prevacp1"))
+                              )
+                 ),
+                 fluidRow(box(width = 12, 
+                              title = 'Variables Coordinates:', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+                              DT::dataTableOutput(ns("coord_var"))
                               )
                  )
         ),
@@ -142,10 +157,11 @@ mod_Inputs_server <- function(id, r = r, session = session){
     ns <- session$ns
     r_values <- reactiveValues(ds1=NULL, mt1=NULL)
     
+    # Input Dataset
     dataset1 <- reactive({
       cat(file=stderr(), 'dataset1 fun', "\n")
       if (!is.null(input$dataset1)){
-        ds1 <- read.table(input$dataset1$datapath, sep = "\t", dec = ",", header = TRUE)
+        ds1 <- read.table(input$dataset1$datapath, sep = "\t", dec = ",", header = TRUE, stringsAsFactors = TRUE)
         row.names(ds1) <- ds1[,1]
         r_values$ds1 <- ds1
       }
@@ -155,10 +171,11 @@ mod_Inputs_server <- function(id, r = r, session = session){
       r_values$ds1
     })
     
+    # Input Metadata
     metadata1 <- reactive({
       cat(file=stderr(), 'metadata1 fun', "\n")
       if (!is.null(input$metadata1)){
-        r_values$mt1 <- read.table(input$metadata1$datapath, sep = "\t", dec = ",", header = TRUE)
+        r_values$mt1 <- read.table(input$metadata1$datapath, sep = "\t", dec = ",", header = TRUE, stringsAsFactors = TRUE)
       }else{
         cat(file=stderr(), 'metadata1 is null', "\n")
         r_values$mt1 = NULL
@@ -166,6 +183,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       r_values$mt1
     })
     
+    # Preview
     output$prevds1 <- renderPrint({
       cat(file = stderr(), 'rendering ds1', "\n")
       cat('Running graphstats v0.0.0.9000\n')
@@ -191,6 +209,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       
     })
     
+    # Datatable with reactive filters & button
     output$metabo_datatable <- DT::renderDataTable({
       req(dataset1())
       cat(file=stderr(), 'Dataset datatable', "\n")
@@ -216,23 +235,19 @@ mod_Inputs_server <- function(id, r = r, session = session){
     
     
     
-    output$mergedf <- renderPrint({
-      cat(file = stderr(), 'rendering mergedf', "\n")
-      if (is.null(mergedf())) {
-        print("no data")
-      } else if (ncol(mergedf()) > 6) {
-        head(mergedf()[, 1:6])
-      } else{
-        head(mergedf()[, 1:ncol(mergedf())])
-      }
-      
-    })
+    # output$mergedf <- renderPrint({
+    #   cat(file = stderr(), 'rendering mergedf', "\n")
+    #   if (is.null(mergedf())) {
+    #     print("no data")
+    #   } else if (ncol(mergedf()) > 6) {
+    #     head(mergedf()[, 1:6])
+    #   } else{
+    #     head(mergedf()[, 1:ncol(mergedf())])
+    #   }
+    #   
+    # })
     
-    observeEvent(input$norm, {
-      cat(file=stderr(), 'button normalize', "\n")
-      normds1()
-    },ignoreNULL = TRUE, ignoreInit = TRUE)
-    
+    # Normalization & button
     normds1 <- reactive({
       req(r_values$subsetds1, input$norm_method)
       ds0 <- r_values$subsetds1
@@ -259,6 +274,14 @@ mod_Inputs_server <- function(id, r = r, session = session){
       # print(r_values$phyobj_norm)
     })
     
+    observeEvent(input$norm, {
+      cat(file=stderr(), 'button normalize', "\n")
+      normds1()
+    },ignoreNULL = TRUE, ignoreInit = TRUE)
+    
+    
+    
+    # Merged table 
     mergedf <- reactive({
       req(r_values$normds1, r_values$mt1)
       r_values$tabF = as.data.frame(t(normds1())) %>% 
@@ -274,7 +297,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       }
     )
     
-    
+    # Function for table filters
     rowCallback <- c(
       "function(row, data){",
       "  for(var i=0; i<data.length; i++){",
@@ -286,6 +309,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       "}"
     )
     
+    # Merged datatable for filtering.
     output$mergedf_DT <- DT::renderDataTable({
       mergedf()
     }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE)
@@ -316,16 +340,8 @@ mod_Inputs_server <- function(id, r = r, session = session){
     
     
     ### ACP tab
-    
-    # output$factor1 = renderUI({
-    #   req(metadata1())
-    #   selectInput(
-    #     ns("fact1"),
-    #     label = "Select factor to test: ",
-    #     choices = names(metadata1())
-    #   )
-    # })
-    
+  
+    # Settings   
     observe({
       req(metadata1())
       updateSelectInput(session, "fact1",
@@ -336,22 +352,49 @@ mod_Inputs_server <- function(id, r = r, session = session){
                         selected = colnames(acp1()$x)[1])
       updateSelectInput(session, "pc2",
                         choices = colnames(acp1()$x)[1:10],
-                        selected = colnames(acp1()$x)[1])
+                        selected = colnames(acp1()$x)[2])
     })
     
-      
+    # ACP 
     acp1 <- eventReactive(input$go2, {
       cat(file=stderr(), 'ACP1 ... ', "\n")
       req(r_values$normds1, r_values$mt1)  # r_values$metadata_final # r_values$features_final
       # print(head(normds1()))
       # print(str(normds1()))
-      acp1 = stats::prcomp(na.omit(r_values$features_final), scale. = TRUE)  #t(normds1()[,-1])
+      if(input$naomit_method == 0){
+      acp_input <- na.omit(r_values$features_final)
+      r_values$snaomit <- setdiff(row.names(r_values$features_final),row.names(acp_input))
+      r_values$snaomit_att <- "sample(s)"
+      }
+      
+      if(input$naomit_method == 1){
+        Tfeat =t(r_values$features_final)
+        Tfeat_ok <- na.omit(Tfeat)
+        acp_input <- t(Tfeat_ok)
+        r_values$snaomit <- setdiff(row.names(Tfeat),row.names(Tfeat_ok))
+        r_values$snaomit_att <- "feature(s)"
+      }
+      
+      acp1 = stats::prcomp(acp_input, scale. = TRUE)  #t(normds1()[,-1])
       r_values$acp1 <- acp1
+      
+      r_values$summary_acp <- summary(acp1)
       
       print(colnames(r_values$acp1$x))
       acp1
     })
+    
+    # Print samples or features with missing values
+    output$naomitval <- renderPrint({
+      req(r_values$snaomit,r_values$snaomit_att)
+      cat(file = stderr(), 'missing values', "\n")
+      list1 <- glue_collapse(r_values$snaomit, ", ")
       
+      glue::glue("Following {r_values$snaomit_att} were omitted for PCA:\n{list1}")
+      
+    })
+    
+    # Generate ACP Table
     acptab <- reactive({
       cat(file=stderr(), 'ACP tab ... ', "\n")
       acptab= as.data.frame(acp1()$x) %>% tibble::rownames_to_column(var = "sample.id") %>% 
@@ -365,14 +408,22 @@ mod_Inputs_server <- function(id, r = r, session = session){
       acptab()
     }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE) 
     
+    
+    # Acp PLOT
     acpplot <- eventReactive(input$go1, {
       req(input$fact1, acptab(), input$pc1, input$pc2)
     # acpplot <- reactive({
       cat(file=stderr(), 'ACP plot', "\n")
       print(input$fact1)
+      
+      pc1 = as.numeric(substring(input$pc1, 3, 10))
+      pc2 = as.numeric(substring(input$pc2, 3, 10))
+      
       p = ggplot(acptab(), aes_string(x = input$pc1, y =
                                         input$pc2, color = input$fact1, sampleID = "sample.id")) + 
-        geom_point() + stat_ellipse(aes_string(x = input$pc1, y = input$pc2, color = input$fact1), inherit.aes = FALSE) + theme_bw()
+        geom_point() + stat_ellipse(aes_string(x = input$pc1, y = input$pc2, color = input$fact1), inherit.aes = FALSE) + theme_bw() + 
+        xlab(glue::glue("{input$pc1} ({round(r_values$summary_acp$importance[2,pc1]*100,1)}%)")) + ylab(glue::glue("{input$pc2} ({round(r_values$summary_acp$importance[2,pc2]*100,1)}%)"))
+      
       ggplotly(p, tooltip=c("x", "y", "sampleID"))
     })
       
