@@ -14,6 +14,10 @@
 #' @importFrom plotly ggplotly
 #' @importFrom plotly config
 #' @importFrom factoextra fviz_pca_var
+#' @importFrom glue glue_collapse
+#' @importFrom glue glue
+#' @importFrom reshape2 melt
+#' @import shinyWidgets
 #' @import ggplot2
 #' @import DT
 
@@ -142,7 +146,27 @@ mod_Inputs_ui <- function(id){
                  )
         ),
         tabPanel("Boxplots",
-                 fluidRow()
+                 fluidRow(
+                   box(title = "Plot Settings:", width = 6, status = "warning", solidHeader = TRUE,
+                       pickerInput(
+                         ns("fact3"),
+                         label = "Factor to plot with in boxplot:",
+                         choices = "",
+                         multiple = TRUE
+                       ),
+                       selectInput(
+                         ns("feat1"),
+                         label = "Feature to plot in boxplot:",
+                         choices = ""
+                       ),
+                       actionButton(ns("go3"), "Plot ACP", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
+                   )
+                 ),
+                 fluidRow(
+                   box(title = "Plot Settings:", width = 12, status = "warning", solidHeader = TRUE,
+                       plotOutput(ns("boxplot1"), height = "500")
+                   )
+                 )
         )
       )
     )
@@ -323,6 +347,10 @@ mod_Inputs_server <- function(id, r = r, session = session){
       row.names(Fdataset) <- Fdataset[,1] # sample.id
       r_values$subsetds_final <- Fdataset
       
+      # melt final dataset for boxplot
+      r_values$subsetds_final_melt <- reshape2::melt(Fdataset, id.vars = 1:ncol(metadata1()), measure.vars = (ncol(metadata1())+1):ncol(Fdataset), variable.name = "features")
+      
+      #for PCA
       r_values$metadata_final <- droplevels(Fdataset[,1:ncol(metadata1())])
       print(head(r_values$metadata_final))
       r_values$features_final <- Fdataset[,(ncol(metadata1())+1):ncol(Fdataset)]
@@ -355,7 +383,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
                         selected = colnames(acp1()$x)[2])
     })
     
-    # ACP 
+    ### ACP 
     acp1 <- eventReactive(input$go2, {
       cat(file=stderr(), 'ACP1 ... ', "\n")
       req(r_values$normds1, r_values$mt1)  # r_values$metadata_final # r_values$features_final
@@ -446,7 +474,49 @@ mod_Inputs_server <- function(id, r = r, session = session){
       req(acpplotvar())
       acpplotvar()
     })
-
+    
+    ###BOXPLOT
+    
+    # Settings   
+    observe({
+      req(metadata1(), r_values$subsetds_final_melt)
+      updateSelectInput(session, "feat1",
+                        choices = unique(r_values$subsetds_final_melt[,"features"]),
+                        selected = unique(r_values$subsetds_final_melt[,"features"])[1])
+      updateSelectInput(session, "fact2",
+                        choices = names(r_values$metadata_final),
+                        selected = names(r_values$metadata_final)[2])
+      updatePickerInput(session, "fact3",
+                        choices = names(r_values$metadata_final),
+                        selected = names(r_values$metadata_final)[2],
+                        options = list(
+                          `actions-box` = TRUE, 
+                          size = 10,
+                          `selected-text-format` = "count > 3"
+                        )
+      )
+    })
+    
+    boxplot1 <- eventReactive(input$go3, {
+      req(r_values$subsetds_final_melt)
+      tabF_melt2 <- tabF_melt <- r_values$subsetds_final_melt
+      if(length(input$fact3) == 1){fact3ok = input$fact3
+        }else{
+          comb = glue::glue_collapse(input$fact3, sep = ', \"_\",')
+          fun = glue::glue('tabF_melt2 <- tabF_melt %>% dplyr::mutate(newfact = paste0({comb}), .after= "sample.id")')
+          eval(parse(text=fun))
+          fact3ok = "newfact"
+        }
+      
+      p <- ggplot(tabF_melt2[tabF_melt2$features == input$feat1,], aes_string(x = fact3ok, y = "value", fill = fact3ok)) + 
+        geom_boxplot() + theme_bw() + xlab("Condition") + ylab("unite à fixer") + ggtitle(input$feat1) + theme(legend.position = "None")
+      p
+    })
+    
+    output$boxplot1 <- renderPlot({
+      req(boxplot1())
+      boxplot1()
+    })
  
   })
 }
