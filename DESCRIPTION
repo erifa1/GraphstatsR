@@ -1,23 +1,36 @@
 Package: graphstats
 Title: graphstats
 Version: 0.0.0.9000
-Authors@R: person('Etienne', 'Rifa', email = 'etienne.rifa@insa-toulouse.fr', role = c('cre', 'aut'))
-Description: A shiny app to easily generate advanced graphics and some non parametric tests.
+Authors@R: 
+    person(given = "Etienne",
+           family = "Rifa",
+           role = c("cre", "aut"),
+           email = "etienne.rifa@insa-toulouse.fr")
+Description: A shiny app to easily generate advanced graphics and some non
+    parametric tests.
 License: MIT + file LICENSE
 Imports: 
-    attempt,
     config (>= 0.3.1),
+    dplyr,
     DT,
+    factoextra,
+    ggplot2,
     glue,
     golem (>= 0.3.1),
-    htmltools,
-    processx,
-    shiny (>= 1.6.0)
-Encoding: UTF-8
-LazyData: true
-RoxygenNote: 7.1.2
+    plotly,
+    reshape2,
+    rhdf5,
+    shiny (>= 1.6.0),
+    shinyBS,
+    shinydashboard,
+    shinyWidgets,
+    stats,
+    tibble
 Suggests: 
     spelling,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
+Encoding: UTF-8
 Language: en-US
+LazyData: true
+RoxygenNote: 7.1.2
