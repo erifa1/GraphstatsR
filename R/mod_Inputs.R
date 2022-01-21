@@ -68,6 +68,11 @@ mod_Inputs_ui <- function(id){
               fluidRow(
                 box(
                   title = 'Normalization options', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+                  selectInput(
+                    ns("norm1fact1"),
+                    label = "Numeric factor/covariable to normalize features values with:",
+                    choices = ""
+                  ),
                   radioButtons(
                     ns("norm_method"),
                     label = "Normalization : ",
@@ -159,7 +164,7 @@ mod_Inputs_ui <- function(id){
                          label = "Feature to plot in boxplot:",
                          choices = ""
                        ),
-                       actionButton(ns("go3"), "Plot ACP", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
+                       actionButton(ns("go3"), "Run plot", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
                    )
                  ),
                  fluidRow(
@@ -186,7 +191,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       cat(file=stderr(), 'dataset1 fun', "\n")
       if (!is.null(input$dataset1)){
         ds1 <- read.table(input$dataset1$datapath, sep = "\t", dec = ",", header = TRUE, stringsAsFactors = TRUE)
-        row.names(ds1) <- ds1[,1]
+        row.names(ds1) <- glue::glue("{ds1[,1]}_{ds1[,2]}")
         r_values$ds1 <- ds1
       }
       # else{
@@ -271,13 +276,37 @@ mod_Inputs_server <- function(id, r = r, session = session){
     #   
     # })
     
-    # Normalization & button
-    normds1 <- reactive({
-      req(r_values$subsetds1, input$norm_method)
+    # Norm 1  norm1fact1
+    pondds1 <- eventReactive(input$norm,{
+      cat(file=stderr(), 'PONDERATION', "\n")
+      req(r_values$subsetds1, input$norm1fact1, metadata1())
       ds0 <- r_values$subsetds1
       class1 <- sapply(ds0, class)
       ds1 <- ds0[,class1 == "numeric"]
-      print(head(ds1))
+      # print(head(ds1))
+      
+      if(input$norm1fact1 == "Raw"){
+        pondds1 <- ds1
+      }else{
+        pondds1 <- t(apply(ds1, 1, function(x){x/metadata1()[[input$norm1fact1]]}))
+      }
+      
+      r_values$pondds1 <- pondds1
+      # print(r_values$phyobj_norm)
+    })
+    
+    
+    
+    # Normalization & button
+    normds1 <- eventReactive(input$norm,{
+      cat(file=stderr(), 'NORMALIZATION', "\n")
+      req(r_values$pondds1, input$norm_method)
+      # ds0 <- r_values$subsetds1
+      # class1 <- sapply(ds0, class)
+      # ds1 <- ds0[,class1 == "numeric"]
+      
+      ds1 <- r_values$pondds1
+      # print(head(ds1))
       
       if(input$norm_method == 0){
         normds1 <- ds1
@@ -293,13 +322,14 @@ mod_Inputs_server <- function(id, r = r, session = session){
         clr = function(x){log(x+1) - rowMeans(log(x+1), na.rm = TRUE)}
         normds1 <- clr(ds1[,-1])
       }
-
+      
+      # print(head(normds1))
       r_values$normds1 <- normds1
-      # print(r_values$phyobj_norm)
     })
     
     observeEvent(input$norm, {
       cat(file=stderr(), 'button normalize', "\n")
+      pondds1()
       normds1()
     },ignoreNULL = TRUE, ignoreInit = TRUE)
     
@@ -372,6 +402,14 @@ mod_Inputs_server <- function(id, r = r, session = session){
     # Settings   
     observe({
       req(metadata1())
+      
+      #Norm1
+      class1 <- sapply(metadata1(), class)
+      r_values$norm1fact = names(metadata1())[class1 %in% "integer" | class1 %in% "numeric"]
+      updateSelectInput(session, "norm1fact1",
+                        choices = c("Raw", r_values$norm1fact),
+                        selected = names(r_values$metadata_final)[1])
+      #ACP
       updateSelectInput(session, "fact1",
                         choices = names(r_values$metadata_final),
                         selected = names(r_values$metadata_final)[1])
