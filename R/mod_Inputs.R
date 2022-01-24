@@ -70,7 +70,7 @@ mod_Inputs_ui <- function(id){
                   title = 'Normalization options', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
                   selectInput(
                     ns("norm1fact1"),
-                    label = "Numeric factor/covariable to normalize features values with:",
+                    label = "Numeric factor/covariable to weight features values with:",
                     choices = ""
                   ),
                   radioButtons(
@@ -146,7 +146,7 @@ mod_Inputs_ui <- function(id){
                  ),
                  fluidRow(box(width = 12, 
                               title = 'Variables Coordinates:', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
-                              DT::dataTableOutput(ns("coord_var"))
+                              DT::dataTableOutput(ns("prevacp1var"))
                               )
                  )
         ),
@@ -283,6 +283,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       ds0 <- r_values$subsetds1
       class1 <- sapply(ds0, class)
       ds1 <- ds0[,class1 == "numeric"]
+      r_values$wgt1 <- input$norm1fact1
       # print(head(ds1))
       
       if(input$norm1fact1 == "Raw"){
@@ -307,6 +308,8 @@ mod_Inputs_server <- function(id, r = r, session = session){
       
       ds1 <- r_values$pondds1
       # print(head(ds1))
+      norm_names = c("Raw", "TSS", "CLR")
+      r_values$norm1 <- norm_names[as.numeric(input$norm_method)+1]
       
       if(input$norm_method == 0){
         normds1 <- ds1
@@ -382,16 +385,16 @@ mod_Inputs_server <- function(id, r = r, session = session){
       
       #for PCA
       r_values$metadata_final <- droplevels(Fdataset[,1:ncol(metadata1())])
-      print(head(r_values$metadata_final))
+      # print(head(r_values$metadata_final))
       r_values$features_final <- Fdataset[,(ncol(metadata1())+1):ncol(Fdataset)]
-      print(head(r_values$features_final))
+      # print(head(r_values$features_final))
     })
     
     observeEvent(input$update_samples, {
       cat(file=stderr(), 'button update_samples', "\n")
       subset_merged()
-      print(nrow(subset_merged()))
-      print(str(subset_merged()))
+      # print(nrow(subset_merged()))
+      # print(str(subset_merged()))
       print(str(r_values$metadata_final))
     },
     ignoreNULL = TRUE, ignoreInit = TRUE)
@@ -461,7 +464,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     })
     
     # Generate ACP Table
-    acptab <- reactive({
+    acptab <- eventReactive(input$go2, {
       cat(file=stderr(), 'ACP tab ... ', "\n")
       acptab= as.data.frame(acp1()$x) %>% tibble::rownames_to_column(var = "sample.id") %>% 
         dplyr::inner_join(x = r_values$metadata_final, by = "sample.id")
@@ -472,6 +475,18 @@ mod_Inputs_server <- function(id, r = r, session = session){
     output$prevacp1 <- DT::renderDataTable({
       cat(file=stderr(), 'ACP table', "\n")
       acptab()
+    }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE) 
+    
+    ## Table var
+    acptabvar <- eventReactive(input$go2, {
+      cat(file=stderr(), 'ACP tab var... ', "\n")
+      acptabvar = factoextra::get_pca_var(acp1())$coord %>% as.data.frame() %>% tibble::rownames_to_column(var = "features") 
+      acptabvar
+    })
+  
+    output$prevacp1var <- DT::renderDataTable({
+      cat(file=stderr(), 'ACP table variables', "\n")
+      acptabvar()
     }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE) 
     
     
@@ -536,6 +551,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     })
     
     boxplot1 <- eventReactive(input$go3, {
+      cat(file=stderr(), 'BOXPLOT', "\n")
       req(r_values$subsetds_final_melt)
       tabF_melt2 <- tabF_melt <- r_values$subsetds_final_melt
       if(length(input$fact3) == 1){fact3ok = input$fact3
@@ -545,9 +561,18 @@ mod_Inputs_server <- function(id, r = r, session = session){
           eval(parse(text=fun))
           fact3ok = "newfact"
         }
+      print(head(tabF_melt2))
+      
+      ytitle <- glue::glue("{as.character(dataset1()[input$feat1,3])}")
+      if(r_values$wgt1 != "Raw"){
+        ytitle <- glue::glue("{ytitle}, weight: {r_values$wgt1}")
+      }
+      if(r_values$norm1 != "Raw"){
+        ytitle <- glue::glue("{ytitle}, norm.: {r_values$norm1}")
+      }
       
       p <- ggplot(tabF_melt2[tabF_melt2$features == input$feat1,], aes_string(x = fact3ok, y = "value", fill = fact3ok)) + 
-        geom_boxplot() + theme_bw() + xlab("Condition") + ylab("unite à fixer") + ggtitle(input$feat1) + theme(legend.position = "None")
+        geom_boxplot() + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(input$feat1) + theme(legend.position = "None")
       p
     })
     
