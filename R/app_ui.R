@@ -4,6 +4,7 @@
 #'     DO NOT REMOVE.
 #' @import shiny
 #' @import shinydashboard
+#' @importFrom shinyalert useShinyalert
 #' @noRd
 app_ui <- function(request) {
   tagList(
@@ -68,9 +69,10 @@ golem_add_external_resources <- function(){
     bundle_resources(
       path = app_sys('app/www'),
       app_title = 'graphstats'
-    )
+    ),
     # Add here other external resources
-    # for example, you can add shinyalert::useShinyalert() 
+    # for example, you can add shinyalert::useShinyalert()
+    shinyalert::useShinyalert()
   )
 }
 

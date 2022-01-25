@@ -14,9 +14,11 @@
 #' @importFrom plotly ggplotly
 #' @importFrom plotly config
 #' @importFrom factoextra fviz_pca_var
+#' @importFrom factoextra get_pca_var
 #' @importFrom glue glue_collapse
 #' @importFrom glue glue
 #' @importFrom reshape2 melt
+#' @importFrom shinyalert shinyalert
 #' @import shinyWidgets
 #' @import ggplot2
 #' @import DT
@@ -191,7 +193,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       cat(file=stderr(), 'dataset1 fun', "\n")
       if (!is.null(input$dataset1)){
         ds1 <- read.table(input$dataset1$datapath, sep = "\t", dec = ",", header = TRUE, stringsAsFactors = TRUE)
-        row.names(ds1) <- glue::glue("{ds1[,1]}_{ds1[,2]}")
+        row.names(ds1) <- glue::glue("{ds1[,1]}__{ds1[,2]}")
         r_values$ds1 <- ds1
       }
       # else{
@@ -292,8 +294,8 @@ mod_Inputs_server <- function(id, r = r, session = session){
         pondds1 <- t(apply(ds1, 1, function(x){x/metadata1()[[input$norm1fact1]]}))
       }
       
+      # print(head(pondds1))
       r_values$pondds1 <- pondds1
-      # print(r_values$phyobj_norm)
     })
     
     
@@ -372,6 +374,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE)
     
     subset_merged <- reactive({
+      
       req(mergedf())
       cat(file=stderr(), 'subset samples ... ', "\n")
       cat(file=stderr(), 'number of samples before',nrow(mergedf()), "\n")
@@ -396,6 +399,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       # print(nrow(subset_merged()))
       # print(str(subset_merged()))
       print(str(r_values$metadata_final))
+      showNotification("Dataset ready !", type="message", duration = 5)
     },
     ignoreNULL = TRUE, ignoreInit = TRUE)
     
@@ -425,9 +429,18 @@ mod_Inputs_server <- function(id, r = r, session = session){
     })
     
     ### ACP 
+    observeEvent({input$go1
+                 input$go2}, {
+      if(!isTruthy(r_values$features_final)){
+        cat(file=stderr(), 'ACP1 no table... ', "\n")
+        shinyalert(title = "Oops", text="Final table not available, check all steps.", type='error')
+      }
+    })
+    
     acp1 <- eventReactive(input$go2, {
       cat(file=stderr(), 'ACP1 ... ', "\n")
-      req(r_values$normds1, r_values$mt1)  # r_values$metadata_final # r_values$features_final
+      req(r_values$features_final)  # r_values$metadata_final # r_values$features_final , r_values$mt1
+      
       # print(head(normds1()))
       # print(str(normds1()))
       if(input$naomit_method == 0){
@@ -443,6 +456,14 @@ mod_Inputs_server <- function(id, r = r, session = session){
         r_values$snaomit <- setdiff(row.names(Tfeat),row.names(Tfeat_ok))
         r_values$snaomit_att <- "feature(s)"
       }
+      
+      # Simplify features names
+      tt <- stringr::str_split(colnames(acp_input), "__")
+      tt1 <- sapply(tt,"[[",1)
+      if(length(unique(tt1) ) == length(tt1)){
+        colnames(acp_input) = tt1
+        print(head(acp_input))
+      }else{print("NON UNIQUE FEATURES in table.")}
       
       acp1 = stats::prcomp(acp_input, scale. = TRUE)  #t(normds1()[,-1])
       r_values$acp1 <- acp1
@@ -465,6 +486,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     
     # Generate ACP Table
     acptab <- eventReactive(input$go2, {
+      req(acp1()$x)
       cat(file=stderr(), 'ACP tab ... ', "\n")
       acptab= as.data.frame(acp1()$x) %>% tibble::rownames_to_column(var = "sample.id") %>% 
         dplyr::inner_join(x = r_values$metadata_final, by = "sample.id")
@@ -495,6 +517,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       req(input$fact1, acptab(), input$pc1, input$pc2)
     # acpplot <- reactive({
       cat(file=stderr(), 'ACP plot', "\n")
+      showNotification("Processing visualization...", type="message", duration = 2)
       print(input$fact1)
       
       pc1 = as.numeric(substring(input$pc1, 3, 10))
@@ -529,6 +552,13 @@ mod_Inputs_server <- function(id, r = r, session = session){
     })
     
     ###BOXPLOT
+    
+    observeEvent(input$go3, {
+      if(!isTruthy(r_values$features_final)){
+        cat(file=stderr(), 'Boxplot no table... ', "\n")
+        shinyalert(title = "Oops", text="Final table not available, check all steps.", type='error')
+      }
+    })
     
     # Settings   
     observe({
