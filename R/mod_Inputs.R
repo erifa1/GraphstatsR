@@ -192,8 +192,8 @@ mod_Inputs_server <- function(id, r = r, session = session){
     dataset1 <- reactive({
       cat(file=stderr(), 'dataset1 fun', "\n")
       if (!is.null(input$dataset1)){
-        ds1 <- read.table(input$dataset1$datapath, sep = "\t", dec = ",", header = TRUE, stringsAsFactors = TRUE)
-        row.names(ds1) <- glue::glue("{ds1[,1]}__{ds1[,2]}")
+        ds1 <- read.table(input$dataset1$datapath, sep = "\t", dec = ".", header = TRUE, stringsAsFactors = TRUE)
+        row.names(ds1) <- glue::glue("{ds1[,1]}__{ds1[,2]}__{ds1[,3]}")
         r_values$ds1 <- ds1
       }
       # else{
@@ -206,7 +206,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     metadata1 <- reactive({
       cat(file=stderr(), 'metadata1 fun', "\n")
       if (!is.null(input$metadata1)){
-        r_values$mt1 <- read.table(input$metadata1$datapath, sep = "\t", dec = ",", header = TRUE, stringsAsFactors = TRUE)
+        r_values$mt1 <- read.table(input$metadata1$datapath, sep = "\t", dec = ".", header = TRUE, stringsAsFactors = TRUE)
       }else{
         cat(file=stderr(), 'metadata1 is null', "\n")
         r_values$mt1 = NULL
@@ -463,14 +463,19 @@ mod_Inputs_server <- function(id, r = r, session = session){
       if(length(unique(tt1) ) == length(tt1)){
         colnames(acp_input) = tt1
         print(head(acp_input))
-      }else{print("NON UNIQUE FEATURES in table.")}
+        acp1 = stats::prcomp(acp_input, scale. = TRUE)  #t(normds1()[,-1])
+        r_values$acp1 <- acp1
+        
+        r_values$summary_acp <- summary(acp1)
+        
+        print(colnames(r_values$acp1$x))
+        acp1
+        
+      }else{print("NON UNIQUE FEATURES in table.")
+        shinyalert(title = "Oops", text="Non unique features in table, consider filtering on metadata.", type='error')
+        acp1 = NULL
+      }
       
-      acp1 = stats::prcomp(acp_input, scale. = TRUE)  #t(normds1()[,-1])
-      r_values$acp1 <- acp1
-      
-      r_values$summary_acp <- summary(acp1)
-      
-      print(colnames(r_values$acp1$x))
       acp1
     })
     
