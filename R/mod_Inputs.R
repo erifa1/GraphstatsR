@@ -10,6 +10,7 @@
 #' @import tibble 
 #' @import dplyr
 #' @import tidyr
+#' @import gridExtra
 #' @importFrom plotly plotlyOutput
 #' @importFrom plotly renderPlotly
 #' @importFrom plotly ggplotly
@@ -170,6 +171,8 @@ mod_Inputs_ui <- function(id){
                        actionButton(ns("go3"), "Run plot/stats & tests", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
                        ,
                        actionButton(ns("go4"), "Update Plot", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
+                       ,
+                       downloadButton(outputId = ns("boxplots_download"), label = "Download all plots (long process)")
                    )
                  ),
                  fluidRow(
@@ -623,6 +626,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       p <- ggplot(tabF_melt2[tabF_melt2$features == input$feat1,], aes_string(x = fact3ok, y = "value", fill = fact3ok)) + 
         geom_boxplot() + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(input$feat1) + theme(legend.position = "None")
       cat(file=stderr(), 'BOXPLOT done', "\n")
+      
       p
       
     })
@@ -631,6 +635,52 @@ mod_Inputs_server <- function(id, r = r, session = session){
       req(boxplot1())
       boxplot1()
     })
+    
+    # Export all figures
+    
+    pdfall <- reactive({
+      cat(file=stderr(), 'ALL BOXPLOT', "\n")
+      req(r_values$tabF_melt2, r_values$fact3ok)
+      fact3ok <- r_values$fact3ok
+      tabF_melt2 <- r_values$tabF_melt2
+      listP <- list()
+      FEAT = levels(tabF_melt2$features)
+      print(head(FEAT))
+      
+      for(i in 1:length(FEAT)){
+        
+        tt <- stringr::str_split(FEAT[i], "__")
+        print(tt)
+        ytitle <- sapply(tt,"[[",3)
+        print(ytitle)
+        if(r_values$wgt1 != "Raw"){
+          ytitle <- glue::glue("{ytitle}, weight: {r_values$wgt1}")
+        }
+        if(r_values$norm1 != "Raw"){
+          ytitle <- glue::glue("{ytitle}, norm.: {r_values$norm1}")
+        }
+        listP[[i]] <- ggplot(tabF_melt2[tabF_melt2$features == FEAT[i],], aes_string(x = fact3ok, y = "value", fill = fact3ok)) + 
+          geom_boxplot() + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(FEAT[i]) + theme(legend.position = "None")
+      }
+      print(length(listP))
+      
+      listP
+    })
+    
+    output$boxplots_download <- downloadHandler(
+      filename = "figures.pdf",
+      content = function(file) {
+        print('DOWNLOAD ALL')
+        req(pdfall())
+        # write.table(r_values$subsetds_final, file, sep="\t", row.names=FALSE)
+        p <- pdfall()
+        print('pdf output')
+        ml <- marrangeGrob(p, nrow=2, ncol=2)
+        ggsave(file, ml)
+        
+      }
+    )
+    
     
     
     summaryBP <- eventReactive(input$go3, {
