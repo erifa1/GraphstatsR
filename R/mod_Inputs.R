@@ -9,6 +9,7 @@
 #' @importFrom shiny NS tagList
 #' @import tibble 
 #' @import dplyr
+#' @import tidyr
 #' @importFrom plotly plotlyOutput
 #' @importFrom plotly renderPlotly
 #' @importFrom plotly ggplotly
@@ -179,6 +180,11 @@ mod_Inputs_ui <- function(id){
                  fluidRow(box(width = 12, 
                               title = 'Boxplot sumary stats:', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
                               DT::dataTableOutput(ns("summaryBP"))
+                 )),
+                 fluidRow(box(width = 12, 
+                              title = 'Pairwise Wilcox tests:', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+                              DT::dataTableOutput(ns("wilcoxBP"))
+                              # w or w\ fdr correction. 
                  ))
         )
       )
@@ -591,8 +597,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       )
     })
     
-    boxplot1 <- eventReactive({input$go3
-      input$go4}, {
+    boxplot1 <- eventReactive(input$go3, {  #{input$go3 input$go4}
       cat(file=stderr(), 'BOXPLOT', "\n")
       req(r_values$subsetds_final_melt)
       r_values$tabF_melt2 <- tabF_melt2 <- tabF_melt <- r_values$subsetds_final_melt
@@ -627,6 +632,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       boxplot1()
     })
     
+    
     summaryBP <- eventReactive(input$go3, {
       cat(file=stderr(), 'BOXPLOT summary', "\n")
       q = c(.25, .5, .75)
@@ -660,6 +666,39 @@ mod_Inputs_server <- function(id, r = r, session = session){
     }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE) 
     
  
+    #wilcoxBP
+    wilcoxBP <- eventReactive(input$go3, {
+      cat(file=stderr(), 'wilcoxBP table', "\n")
+      
+      Amelt <- r_values$tabF_melt2
+      
+      pval_table <- data.frame()
+      for(feat1 in unique(Amelt$features)){
+        wcoxtab = pairwise.wilcox.test(Amelt[Amelt$features == feat1,"value"], Amelt[,r_values$fact3ok],
+                                       p.adjust.method = "none")
+
+        ftable1 <- as.data.frame(wcoxtab$p.value) %>%
+          rownames_to_column() %>% pivot_longer(!rowname, names_to = "condition", values_to = "pvalue") %>%
+          na.omit() %>% add_column(Features = feat1, .after = 0)
+
+        pval_table <- rbind.data.frame(pval_table, ftable1)
+      }
+      colnames(pval_table) = c("Features", "Condition1", "Condition2", "pvalue")
+      
+      Fpvaltable <- pval_table %>% mutate(adjusted_pval = p.adjust(pvalue, method = "fdr")) %>% mutate_if(is.character,as.factor) 
+      print(dim(Fpvaltable))
+      cat(file=stderr(), 'wilcoxBP table done', "\n")
+      
+      Fpvaltable
+    })
+    
+    output$wilcoxBP <- DT::renderDataTable({
+      cat(file=stderr(), 'wilcoxBP DT', "\n")
+      wilcoxBP()
+    }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE) 
+    
+    
+      
   })
 }
     
