@@ -7,8 +7,8 @@
 #' @noRd 
 #'
 #' @importFrom shiny NS tagList
-#' @importFrom tibble rownames_to_column 
-#' @importFrom dplyr right_join
+#' @import tibble 
+#' @import dplyr
 #' @importFrom plotly plotlyOutput
 #' @importFrom plotly renderPlotly
 #' @importFrom plotly ggplotly
@@ -154,7 +154,7 @@ mod_Inputs_ui <- function(id){
         ),
         tabPanel("Boxplots",
                  fluidRow(
-                   box(title = "Plot Settings:", width = 6, status = "warning", solidHeader = TRUE,
+                   box(title = "Plot Settings:", width = 7, status = "warning", solidHeader = TRUE,
                        pickerInput(
                          ns("fact3"),
                          label = "Factor to plot with in boxplot:",
@@ -166,14 +166,20 @@ mod_Inputs_ui <- function(id){
                          label = "Feature to plot in boxplot:",
                          choices = ""
                        ),
-                       actionButton(ns("go3"), "Run plot", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
+                       actionButton(ns("go3"), "Run plot/stats & tests", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
+                       ,
+                       actionButton(ns("go4"), "Update Plot", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
                    )
                  ),
                  fluidRow(
                    box(title = "Plot Settings:", width = 12, status = "warning", solidHeader = TRUE,
                        plotOutput(ns("boxplot1"), height = "500")
                    )
-                 )
+                 ),
+                 fluidRow(box(width = 12, 
+                              title = 'Boxplot sumary stats:', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+                              DT::dataTableOutput(ns("summaryBP"))
+                 ))
         )
       )
     )
@@ -585,18 +591,21 @@ mod_Inputs_server <- function(id, r = r, session = session){
       )
     })
     
-    boxplot1 <- eventReactive(input$go3, {
+    boxplot1 <- eventReactive({input$go3
+      input$go4}, {
       cat(file=stderr(), 'BOXPLOT', "\n")
       req(r_values$subsetds_final_melt)
-      tabF_melt2 <- tabF_melt <- r_values$subsetds_final_melt
-      if(length(input$fact3) == 1){fact3ok = input$fact3
+      r_values$tabF_melt2 <- tabF_melt2 <- tabF_melt <- r_values$subsetds_final_melt
+      if(length(input$fact3) == 1){r_values$fact3ok <- fact3ok <- input$fact3
         }else{
           comb = glue::glue_collapse(input$fact3, sep = ', \"_\",')
           fun = glue::glue('tabF_melt2 <- tabF_melt %>% dplyr::mutate(newfact = paste0({comb}), .after= "sample.id")')
           eval(parse(text=fun))
-          fact3ok = "newfact"
+          r_values$fact3ok <- fact3ok <- "newfact"
+          r_values$tabF_melt2 <- tabF_melt2
         }
-      print(head(tabF_melt2))
+      print(head(r_values$tabF_melt2))
+      print(r_values$fact3ok)
       
       ytitle <- glue::glue("{as.character(dataset1()[input$feat1,3])}")
       if(r_values$wgt1 != "Raw"){
@@ -608,13 +617,48 @@ mod_Inputs_server <- function(id, r = r, session = session){
       
       p <- ggplot(tabF_melt2[tabF_melt2$features == input$feat1,], aes_string(x = fact3ok, y = "value", fill = fact3ok)) + 
         geom_boxplot() + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(input$feat1) + theme(legend.position = "None")
+      cat(file=stderr(), 'BOXPLOT done', "\n")
       p
+      
     })
     
     output$boxplot1 <- renderPlot({
       req(boxplot1())
       boxplot1()
     })
+    
+    summaryBP <- eventReactive(input$go3, {
+      cat(file=stderr(), 'BOXPLOT summary', "\n")
+      q = c(.25, .5, .75)
+      boxstat <- data.frame()
+      #calculate quantiles by grouping variable
+      Amelt <- r_values$tabF_melt2
+      print(head(Amelt))
+      
+      for(i in unique(Amelt$features)){
+        boxstat1 <- na.omit(Amelt[Amelt$features == i,]) %>%
+          group_by(.dots = r_values$fact3ok) %>% #TimePoint_Condition_Traitement
+          summarize(min = min(value),
+                    quant25 = quantile(value, probs = q[1]),
+                    median = quantile(value, probs = q[2]),
+                    quant75 = quantile(value, probs = q[3]),
+                    max = max(value),
+                    mean = mean(value),
+                    sd = sd(value)) %>% 
+          add_column(Features = i, .after = 0) %>% mutate_if(is.character,as.factor)
+        
+        boxstat <- rbind(boxstat, boxstat1)
+      }
+      cat(file=stderr(), 'BOXPLOT summary done', "\n")
+      print(head(boxstat))
+      as.data.frame(boxstat)
+    })
+    
+    output$summaryBP <- DT::renderDataTable({
+      cat(file=stderr(), 'SummaryBP DT', "\n")
+      summaryBP()
+    }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE) 
+    
  
   })
 }
