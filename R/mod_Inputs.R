@@ -10,7 +10,7 @@
 #' @import tibble 
 #' @import dplyr
 #' @import tidyr
-#' @import gridExtra
+#' @importFrom gridExtra marrangeGrob
 #' @importFrom plotly plotlyOutput
 #' @importFrom plotly renderPlotly
 #' @importFrom plotly ggplotly
@@ -136,21 +136,25 @@ mod_Inputs_ui <- function(id){
                  ),
                  fluidRow(box(width = 6, 
                               title = 'ACP plot individuals', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
-                              plotlyOutput(ns("acpplot"), height = "500")
+                              plotlyOutput(ns("acpplot"), height = "500"),
+                              downloadButton(outputId = ns("acpplot_download"), label = "Download html plot")
                               ),
                           box(width = 6, 
                               title = 'ACP plot variables', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
-                              plotOutput(ns("acpplotvar"), height = "500")
+                              plotOutput(ns("acpplotvar"), height = "500"),
+                              downloadButton(outputId = ns("acpplotvar_download"), label = "Download plot")
                               )
                           ),
                  fluidRow(box(width = 12, 
-                              title = 'ACP table', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
-                              DT::dataTableOutput(ns("prevacp1"))
+                              title = 'Individuals Coordinates:', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+                              DT::dataTableOutput(ns("prevacp1")),
+                              downloadButton(outputId = ns("acpind_download"), label = "Download table")
                               )
                  ),
                  fluidRow(box(width = 12, 
                               title = 'Variables Coordinates:', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
-                              DT::dataTableOutput(ns("prevacp1var"))
+                              DT::dataTableOutput(ns("prevacp1var")),
+                              downloadButton(outputId = ns("acpvar_download"), label = "Download table")
                               )
                  )
         ),
@@ -168,26 +172,26 @@ mod_Inputs_ui <- function(id){
                          label = "Feature to plot in boxplot:",
                          choices = ""
                        ),
-                       actionButton(ns("go3"), "Run plot/stats & tests", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
-                       ,
-                       actionButton(ns("go4"), "Update Plot", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
-                       ,
+                       actionButton(ns("go4"), "Just plot", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
+                       actionButton(ns("go3"), "Run plot/stats & tests", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
                        downloadButton(outputId = ns("boxplots_download"), label = "Download all plots (long process)")
                    )
                  ),
                  fluidRow(
-                   box(title = "Plot Settings:", width = 12, status = "warning", solidHeader = TRUE,
+                   box(title = "Boxplot:", width = 12, status = "warning", solidHeader = TRUE,
                        plotOutput(ns("boxplot1"), height = "500")
                    )
                  ),
                  fluidRow(box(width = 12, 
                               title = 'Boxplot sumary stats:', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
-                              DT::dataTableOutput(ns("summaryBP"))
+                              DT::dataTableOutput(ns("summaryBP")),
+                              downloadButton(outputId = ns("summaryBP_download"), label = "Download table")
                  )),
                  fluidRow(box(width = 12, 
                               title = 'Pairwise Wilcox tests:', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
-                              DT::dataTableOutput(ns("wilcoxBP"))
-                              # w or w\ fdr correction. 
+                              DT::dataTableOutput(ns("wilcoxBP")),
+                              downloadButton(outputId = ns("wilcoxBP_download"), label = "Download table")
+                              
                  ))
         )
       )
@@ -519,6 +523,15 @@ mod_Inputs_server <- function(id, r = r, session = session){
       acptab()
     }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE) 
     
+    output$acpind_download <- downloadHandler(
+      filename = "acpind_table.csv",
+      content = function(file) {
+        req(acptab())
+        write.table(acptab(), file, sep="\t", row.names=FALSE)
+      }
+    )
+    
+    
     ## Table var
     acptabvar <- eventReactive(input$go2, {
       cat(file=stderr(), 'ACP tab var... ', "\n")
@@ -531,6 +544,13 @@ mod_Inputs_server <- function(id, r = r, session = session){
       acptabvar()
     }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE) 
     
+    output$acpvar_download <- downloadHandler(
+      filename = "acpvar_table.csv",
+      content = function(file) {
+        req(acptabvar())
+        write.table(acptabvar(), file, sep="\t", row.names=FALSE)
+      }
+    )
     
     # Acp PLOT
     acpplot <- eventReactive(input$go1, {
@@ -556,6 +576,15 @@ mod_Inputs_server <- function(id, r = r, session = session){
       acpplot() %>% config(toImageButtonOptions = list(format = "svg"))
     })
     
+    output$acpplot_download <- downloadHandler(
+      filename = "ACP_plot.html",
+      content = function(file) {
+        req(acpplot())
+        saveWidget(acpplot(), file= file)
+      }
+    )
+    
+    
     acpplotvar <- eventReactive(input$go1, {
       req(acp1(), input$pc1, input$pc2)
       pc1 = as.numeric(substring(input$pc1, 3, 10))
@@ -570,6 +599,15 @@ mod_Inputs_server <- function(id, r = r, session = session){
       req(acpplotvar())
       acpplotvar()
     })
+    
+    output$acpplotvar_download <- downloadHandler(
+      filename = "acp_plotvar.pdf",
+      content = function(file) {
+        req(acpplotvar())
+        p <- acpplotvar()
+        ggsave(file, p, units = "cm", width = 15, height = 15, dpi = 300)
+      }
+    )
     
     ###BOXPLOT
     
@@ -599,10 +637,12 @@ mod_Inputs_server <- function(id, r = r, session = session){
                         )
       )
     })
+
     
-    boxplot1 <- eventReactive(input$go3, {  #{input$go3 input$go4}
+    
+    boxplot1 <- eventReactive(c(input$go3, input$go4), {
       cat(file=stderr(), 'BOXPLOT', "\n")
-      req(r_values$subsetds_final_melt)
+      req(r_values$subsetds_final_melt, input$fact3)
       r_values$tabF_melt2 <- tabF_melt2 <- tabF_melt <- r_values$subsetds_final_melt
       if(length(input$fact3) == 1){r_values$fact3ok <- fact3ok <- input$fact3
         }else{
@@ -624,16 +664,22 @@ mod_Inputs_server <- function(id, r = r, session = session){
       }
       
       p <- ggplot(tabF_melt2[tabF_melt2$features == input$feat1,], aes_string(x = fact3ok, y = "value", fill = fact3ok)) + 
-        geom_boxplot() + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(input$feat1) + theme(legend.position = "None")
+        geom_boxplot() + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(input$feat1) +
+        theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1))
       cat(file=stderr(), 'BOXPLOT done', "\n")
       
-      p
+      outlist = list()
+      outlist$p <- p
+      outlist$tabF_melt2 <- tabF_melt2
+      outlist$fact3ok <- fact3ok
       
+      outlist
     })
     
     output$boxplot1 <- renderPlot({
       req(boxplot1())
-      boxplot1()
+      bp1 <- boxplot1()
+      bp1$p
     })
     
     # Export all figures
@@ -641,27 +687,30 @@ mod_Inputs_server <- function(id, r = r, session = session){
     pdfall <- reactive({
       cat(file=stderr(), 'ALL BOXPLOT', "\n")
       req(r_values$tabF_melt2, r_values$fact3ok)
-      fact3ok <- r_values$fact3ok
-      tabF_melt2 <- r_values$tabF_melt2
-      listP <- list()
-      FEAT = levels(tabF_melt2$features)
-      print(head(FEAT))
-      
-      for(i in 1:length(FEAT)){
+
+        fact3ok <- r_values$fact3ok
+        tabF_melt2 <- r_values$tabF_melt2
+        listP <- list()
+        FEAT = levels(tabF_melt2$features)
+        print(head(FEAT))
         
-        tt <- stringr::str_split(FEAT[i], "__")
-        print(tt)
-        ytitle <- sapply(tt,"[[",3)
-        print(ytitle)
-        if(r_values$wgt1 != "Raw"){
-          ytitle <- glue::glue("{ytitle}, weight: {r_values$wgt1}")
+        for(i in 1:length(FEAT)){
+          
+          tt <- stringr::str_split(FEAT[i], "__")
+          print(tt)
+          ytitle <- sapply(tt,"[[",3)
+          print(ytitle)
+          if(r_values$wgt1 != "Raw"){
+            ytitle <- glue::glue("{ytitle}, weight: {r_values$wgt1}")
+          }
+          if(r_values$norm1 != "Raw"){
+            ytitle <- glue::glue("{ytitle}, norm.: {r_values$norm1}")
+          }
+          listP[[i]] <- ggplot(tabF_melt2[tabF_melt2$features == FEAT[i],], aes_string(x = fact3ok, y = "value", fill = fact3ok)) + 
+            geom_boxplot() + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(FEAT[i]) + 
+            theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1))
         }
-        if(r_values$norm1 != "Raw"){
-          ytitle <- glue::glue("{ytitle}, norm.: {r_values$norm1}")
-        }
-        listP[[i]] <- ggplot(tabF_melt2[tabF_melt2$features == FEAT[i],], aes_string(x = fact3ok, y = "value", fill = fact3ok)) + 
-          geom_boxplot() + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(FEAT[i]) + theme(legend.position = "None")
-      }
+      
       print(length(listP))
       
       listP
@@ -675,8 +724,12 @@ mod_Inputs_server <- function(id, r = r, session = session){
         # write.table(r_values$subsetds_final, file, sep="\t", row.names=FALSE)
         p <- pdfall()
         print('pdf output')
-        ml <- marrangeGrob(p, nrow=2, ncol=2)
-        ggsave(file, ml)
+        
+        withProgress({
+          ml <- marrangeGrob(p, nrow=1, ncol=1)
+          ggsave(file, ml, units = "cm", width = 20, height = 15, dpi = 300)
+        }, message = "Prepare pdf file... please wait.")
+
         
       }
     )
@@ -685,15 +738,19 @@ mod_Inputs_server <- function(id, r = r, session = session){
     
     summaryBP <- eventReactive(input$go3, {
       cat(file=stderr(), 'BOXPLOT summary', "\n")
+      req(boxplot1())
+      
+      
+      
       q = c(.25, .5, .75)
       boxstat <- data.frame()
       #calculate quantiles by grouping variable
-      Amelt <- r_values$tabF_melt2
+      Amelt <- boxplot1()$tabF_melt2
       print(head(Amelt))
       
       for(i in unique(Amelt$features)){
         boxstat1 <- na.omit(Amelt[Amelt$features == i,]) %>%
-          group_by(.dots = r_values$fact3ok) %>% #TimePoint_Condition_Traitement
+          group_by(.dots = boxplot1()$fact3ok) %>%
           summarize(min = min(value),
                     quant25 = quantile(value, probs = q[1]),
                     median = quantile(value, probs = q[2]),
@@ -715,16 +772,25 @@ mod_Inputs_server <- function(id, r = r, session = session){
       summaryBP()
     }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE) 
     
+    output$summaryBP_download <- downloadHandler(
+      filename = "summary-boxplot_table.csv",
+      content = function(file) {
+        req(summaryBP())
+        write.table(summaryBP(), file, sep="\t", row.names=FALSE)
+      }
+    )
  
     #wilcoxBP
     wilcoxBP <- eventReactive(input$go3, {
       cat(file=stderr(), 'wilcoxBP table', "\n")
+      req(boxplot1())
       
-      Amelt <- r_values$tabF_melt2
-      
+      Amelt <- boxplot1()$tabF_melt2
+
       pval_table <- data.frame()
       for(feat1 in unique(Amelt$features)){
-        wcoxtab = pairwise.wilcox.test(Amelt[Amelt$features == feat1,"value"], Amelt[,r_values$fact3ok],
+        Ftabtest = na.omit(Amelt[Amelt$features == feat1,])
+        wcoxtab = pairwise.wilcox.test(Ftabtest[Ftabtest$features == feat1,"value"], as.factor(Ftabtest[,boxplot1()$fact3ok]),
                                        p.adjust.method = "none")
 
         ftable1 <- as.data.frame(wcoxtab$p.value) %>%
@@ -747,7 +813,13 @@ mod_Inputs_server <- function(id, r = r, session = session){
       wilcoxBP()
     }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE) 
     
-    
+    output$wilcoxBP_download <- downloadHandler(
+      filename = "wilcoxtests_table.csv",
+      content = function(file) {
+        req(wilcoxBP())
+        write.table(wilcoxBP(), file, sep="\t", row.names=FALSE)
+      }
+    )
       
   })
 }
