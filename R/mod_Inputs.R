@@ -211,9 +211,13 @@ mod_Inputs_server <- function(id, r = r, session = session){
     dataset1 <- reactive({
       cat(file=stderr(), 'dataset1 fun', "\n")
       if (!is.null(input$dataset1)){
+        options(encoding = "UTF-8")
+        
         ds1 <- read.table(input$dataset1$datapath, sep = "\t", dec = ".", header = TRUE, stringsAsFactors = TRUE)
+        ds1$unite <- as.factor(gsub("microg", "\u00b5g", ds1$unite))
         row.names(ds1) <- glue::glue("{ds1[,1]}__{ds1[,2]}__{ds1[,3]}")
         r_values$ds1 <- ds1
+        
       }
       # else{
       #   print("no data")
