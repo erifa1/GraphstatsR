@@ -211,11 +211,12 @@ mod_Inputs_server <- function(id, r = r, session = session){
     dataset1 <- reactive({
       cat(file=stderr(), 'dataset1 fun', "\n")
       if (!is.null(input$dataset1)){
-        options(encoding = "UTF-8")
+        # options(encoding = "UTF-8")
+        options(digits = 4, scipen = -2)
         
         ds1 <- read.table(input$dataset1$datapath, sep = "\t", dec = ".", header = TRUE, stringsAsFactors = TRUE)
         ds1$unite <- as.factor(gsub("microg", "\u00b5g", ds1$unite))
-        row.names(ds1) <- glue::glue("{ds1[,1]}__{ds1[,2]}__{ds1[,3]}")
+        row.names(ds1) <- glue::glue("{ds1[,1]}__{ds1[,3]}")
         r_values$ds1 <- ds1
         
       }
@@ -267,8 +268,10 @@ mod_Inputs_server <- function(id, r = r, session = session){
     output$metabo_datatable <- DT::renderDataTable({
       req(dataset1())
       cat(file=stderr(), 'Dataset datatable', "\n")
-      dataset1()
-    }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE) 
+      dataset1() %>% mutate(across(where(is.numeric), round, 3))
+    }, filter="top",
+    options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback), 
+    columnDefs = list(list(targets = 3, width = '200px'), list(targets = 1, width = '100px')), autoWidth = TRUE, server=TRUE))
     
     subset_metabo <- reactive({
       req(dataset1())
@@ -368,7 +371,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       req(r_values$normds1, r_values$mt1)
       r_values$tabF = as.data.frame(t(normds1())) %>% 
         tibble::rownames_to_column(var = "sample.id") %>% 
-        dplyr::right_join(x = metadata1(), by = "sample.id")
+        dplyr::right_join(x = metadata1(), by = "sample.id") %>% mutate_if(is.character,as.factor)
     })
     
     output$mergedf_download <- downloadHandler(
@@ -391,10 +394,32 @@ mod_Inputs_server <- function(id, r = r, session = session){
       "}"
     )
     
+    # function for selecting row
+    callback <- c(
+      "var id = $(table.table().node()).closest('.datatables').attr('id');",
+      "table.on('click', 'tbody', function(){",
+      "  setTimeout(function(){",
+      "    var indexes = table.rows({selected:true}).indexes();",
+      "    var indices = Array(indexes.length);",
+      "    for(var i = 0; i < indices.length; ++i){",
+      "      indices[i] = indexes[i];",
+      "    }",
+      "    Shiny.setInputValue(id + '_rows_selected', indices);",
+      "  }, 0);",
+      "});"
+    )
+    
+    
     # Merged datatable for filtering.
     output$mergedf_DT <- DT::renderDataTable({
-      mergedf()
-    }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE)
+      mergedf() %>% mutate(across(where(is.numeric), round, 3))
+    }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE,
+    extensions = "Select", selection = "multiple", callback = JS(callback))
+    
+    observe({
+      print(input[["mergedf_DT_rows_selected"]])
+    })
+    
     
     subset_merged <- reactive({
       
@@ -418,7 +443,8 @@ mod_Inputs_server <- function(id, r = r, session = session){
     
     observeEvent(input$update_samples, {
       cat(file=stderr(), 'button update_samples', "\n")
-      subset_merged()
+        subset_merged()
+      
       # print(nrow(subset_merged()))
       # print(str(subset_merged()))
       print(str(r_values$metadata_final))
