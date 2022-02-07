@@ -241,7 +241,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     # Preview
     output$prevds1 <- renderPrint({
       cat(file = stderr(), 'rendering ds1', "\n")
-      cat('Running graphstats v0.0.0.9001\n')
+      cat('Running graphstats v1.0.0\n')
       head(dataset1()[, 1:6])
       if (is.null(dataset1())) {
         print("no data")
@@ -532,11 +532,9 @@ mod_Inputs_server <- function(id, r = r, session = session){
     output$naomitval <- renderPrint({
       req(r_values$snaomit,r_values$snaomit_att)
       cat(file = stderr(), 'missing values', "\n")
-      list1 <- glue_collapse(r_values$snaomit, ", ")
-      
-      glue::glue("Following {r_values$snaomit_att} were omitted for PCA:\n{list1}")
-      
-    })
+        list1 <- glue_collapse(r_values$snaomit, ", ")
+        glue::glue("Following {r_values$snaomit_att} were omitted for PCA:\n{list1}")
+     })
     
     # Generate ACP Table
     acptab <- eventReactive(input$go2, {
@@ -723,12 +721,12 @@ mod_Inputs_server <- function(id, r = r, session = session){
         listP <- list()
         FEAT = levels(tabF_melt2$features)
         print(head(FEAT))
-        
+
         for(i in 1:length(FEAT)){
           
           tt <- stringr::str_split(FEAT[i], "__")
           print(tt)
-          ytitle <- sapply(tt,"[[",3)
+          ytitle <- sapply(tt,"[[",2)
           print(ytitle)
           if(r_values$wgt1 != "Raw"){
             ytitle <- glue::glue("{ytitle}, weight: {r_values$wgt1}")
@@ -751,7 +749,6 @@ mod_Inputs_server <- function(id, r = r, session = session){
       content = function(file) {
         print('DOWNLOAD ALL')
         req(pdfall())
-        # write.table(r_values$subsetds_final, file, sep="\t", row.names=FALSE)
         p <- pdfall()
         print('pdf output')
         

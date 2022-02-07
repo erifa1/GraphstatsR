@@ -17,18 +17,18 @@ app_ui <- function(request) {
     dashboardPage(skin = "red",
                   dashboardHeader(
                     title = "GraphStats",
-                    tags$li(class="dropdown",tags$a(icon("gitlab"), headerText = "Source code",href="https://forgemia.inra.fr/umrf/", target="_blank")),
-                    tags$li(class="dropdown",tags$a(icon("clinic-medical"), headerText = "Issues",href="https://forgemia.inra.fr/umrf/-/issues", target="_blank")),
-                    tags$li(class="dropdown",tags$a(icon("twitter"), headerText = "Share", href="
-https://twitter.com", target="_blank"))
+                    tags$li(class="dropdown",tags$a(icon("gitlab"), headerText = "Source code",href="https://forgemia.inra.fr/etienne.rifa/graphstats", target="_blank")),
+                    tags$li(class="dropdown",tags$a(icon("clinic-medical"), headerText = "Issues",href="https://forgemia.inra.fr/etienne.rifa/graphstats/-/issues", target="_blank"))#,
+                    # tags$li(class="dropdown",tags$a(icon("twitter"), headerText = "Share", href="
+# https://twitter.com", target="_blank"))
                   ),
                   
                   dashboardSidebar(
                     sidebarMenu(
                       id="tabs",
                       style = "position: fixed; overflow: visible",
-                      menuItem("Easy Stats", tabName= 'easystats', icon=icon("diagnoses")),
-                      menuItem("IDMS choice", tabName= 'idmschoice', icon=icon("diagnoses"))
+                      menuItem("Easy Stats", tabName= 'easystats', icon=icon("diagnoses"))#,
+                      # menuItem("IDMS choice", tabName= 'idmschoice', icon=icon("diagnoses"))
                       # menuItem("Community Composition", tabName = "tab_compo", icon = icon("chart-pie"))
                     )
                   ),
@@ -38,10 +38,10 @@ https://twitter.com", target="_blank"))
                     tabItems(
                       tabItem(tabName = 'easystats',
                               mod_Inputs_ui("Inputs_ui_1")
-                      ),
-                      tabItem(tabName = 'idmschoice',
-                              mod_idmschoice_ui("idmschoice_ui_1")
-                      )
+                      )#,
+                      # tabItem(tabName = 'idmschoice',
+                      #         mod_idmschoice_ui("idmschoice_ui_1")
+                      # )
                     )
                   )
                   
