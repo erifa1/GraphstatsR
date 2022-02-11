@@ -177,9 +177,15 @@ mod_Inputs_ui <- function(id){
                        downloadButton(outputId = ns("boxplots_download"), label = "Download all plots (long process)")
                    )
                  ),
+                 # fluidRow(
+                 #   box(title = "Boxplot:", width = 12, status = "warning", solidHeader = TRUE,
+                 #       plotOutput(ns("boxplot1"), height = "500")
+                 #   )
+                 # ),
                  fluidRow(
-                   box(title = "Boxplot:", width = 12, status = "warning", solidHeader = TRUE,
-                       plotOutput(ns("boxplot1"), height = "500")
+                   box(width = 12, 
+                       title = 'Boxplot:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+                       plotlyOutput(ns("boxplotly1"), height = "500")
                    )
                  ),
                  fluidRow(box(width = 12, 
@@ -212,7 +218,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       cat(file=stderr(), 'dataset1 fun', "\n")
       if (!is.null(input$dataset1)){
         # options(encoding = "UTF-8")
-        options(digits = 4, scipen = -2)
+        # options(digits = 4, scipen = -2)
         
         ds1 <- read.table(input$dataset1$datapath, sep = "\t", dec = ".", header = TRUE, stringsAsFactors = TRUE)
         ds1$unite <- as.factor(gsub("microg", "\u00b5g", ds1$unite))
@@ -241,7 +247,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     # Preview
     output$prevds1 <- renderPrint({
       cat(file = stderr(), 'rendering ds1', "\n")
-      cat('Running graphstats v1.0.0\n')
+      cat('Running graphstats v1.0.1\n')
       head(dataset1()[, 1:6])
       if (is.null(dataset1())) {
         print("no data")
@@ -291,28 +297,21 @@ mod_Inputs_server <- function(id, r = r, session = session){
     ignoreNULL = TRUE, ignoreInit = TRUE)
     
     
-    
-    # output$mergedf <- renderPrint({
-    #   cat(file = stderr(), 'rendering mergedf', "\n")
-    #   if (is.null(mergedf())) {
-    #     print("no data")
-    #   } else if (ncol(mergedf()) > 6) {
-    #     head(mergedf()[, 1:6])
-    #   } else{
-    #     head(mergedf()[, 1:ncol(mergedf())])
-    #   }
-    #   
-    # })
-    
-    # Norm 1  norm1fact1
-    pondds1 <- eventReactive(input$norm,{
+    # Normalization & button
+    normds1 <- eventReactive(input$norm,{
+      prev <- function(x){
+        if(nrow(x)>10){nr = 10}else{nr = nrow(x)}
+        if(ncol(x)>10){nc = 10}else{nc = ncol(x)}
+        x[1:nr,1:nc]
+      }
+     
       cat(file=stderr(), 'PONDERATION', "\n")
-      req(r_values$subsetds1, input$norm1fact1, metadata1())
+      req(r_values$subsetds1, input$norm1fact1, metadata1(), input$norm_method)
       ds0 <- r_values$subsetds1
       class1 <- sapply(ds0, class)
       ds1 <- ds0[,class1 == "numeric"]
       r_values$wgt1 <- input$norm1fact1
-      # print(head(ds1))
+      print(prev(ds1))
       
       if(input$norm1fact1 == "Raw"){
         pondds1 <- ds1
@@ -320,25 +319,17 @@ mod_Inputs_server <- function(id, r = r, session = session){
         pondds1 <- t(apply(ds1, 1, function(x){x/metadata1()[[input$norm1fact1]]}))
       }
       
-      # print(head(pondds1))
-      r_values$pondds1 <- pondds1
-    })
-    
-    
-    
-    # Normalization & button
-    normds1 <- eventReactive(input$norm,{
-      cat(file=stderr(), 'NORMALIZATION', "\n")
-      req(r_values$pondds1, input$norm_method)
-      # ds0 <- r_values$subsetds1
-      # class1 <- sapply(ds0, class)
-      # ds1 <- ds0[,class1 == "numeric"]
+      print(prev(pondds1))
+      # r_values$pondds1 <- pondds1
       
-      ds1 <- r_values$pondds1
+      
+      cat(file=stderr(), 'NORMALIZATION', "\n")
+      ds1 <- pondds1
       # print(head(ds1))
       norm_names = c("Raw", "TSS", "CLR")
       r_values$norm1 <- norm_names[as.numeric(input$norm_method)+1]
-      
+      print(r_values$norm1)
+
       if(input$norm_method == 0){
         normds1 <- ds1
       }
@@ -346,21 +337,23 @@ mod_Inputs_server <- function(id, r = r, session = session){
       if(input$norm_method == 1){
         normf = function(x){ x/sum(x) }
         # normds1 <- transform_sample_counts(ds1, normf)
-        normds1 <- apply(ds1[,-1], 2, normf)
+        normds1 <- apply(ds1, 2, normf)
       }
       
       if(input$norm_method == 2){
         clr = function(x){log(x+1) - rowMeans(log(x+1), na.rm = TRUE)}
-        normds1 <- clr(ds1[,-1])
+        normds1 <- clr(ds1)
       }
       
-      # print(head(normds1))
+      print(prev(normds1))
+      
       r_values$normds1 <- normds1
+
     })
     
     observeEvent(input$norm, {
       cat(file=stderr(), 'button normalize', "\n")
-      pondds1()
+      # pondds1()
       normds1()
     },ignoreNULL = TRUE, ignoreInit = TRUE)
     
@@ -382,7 +375,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       }
     )
     
-    # Function for table filters
+  # Function for table filters
     rowCallback <- c(
       "function(row, data){",
       "  for(var i=0; i<data.length; i++){",
@@ -393,6 +386,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       "  }",
       "}"
     )
+    
     
     # function for selecting row
     callback <- c(
@@ -484,6 +478,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
         cat(file=stderr(), 'ACP1 no table... ', "\n")
         shinyalert(title = "Oops", text="Final table not available, check all steps.", type='error')
       }
+                   
     })
     
     acp1 <- eventReactive(input$go2, {
@@ -506,18 +501,33 @@ mod_Inputs_server <- function(id, r = r, session = session){
         r_values$snaomit_att <- "feature(s)"
       }
       
+      if(nrow(acp_input) == 0){
+        print("Empty table")
+        showNotification("Empty table for ACP ...", type="error", duration = 5)
+        return()
+      }
+      
       # Simplify features names
       tt <- stringr::str_split(colnames(acp_input), "__")
       tt1 <- sapply(tt,"[[",1)
       if(length(unique(tt1) ) == length(tt1)){
         colnames(acp_input) = tt1
         print(head(acp_input))
-        acp1 = stats::prcomp(acp_input, scale. = TRUE)  #t(normds1()[,-1])
+        
+        # Check SD
+        sds = apply(acp_input, 2, sd, na.rm=TRUE)
+        keepsds = which(sds > 0)
+          cat(file=stderr(), 'Delete variables with sd = 0 ... ', "\n")
+          print(which(sds==0))
+          Facp_input <- acp_input[,keepsds]
+          
+
+        acp1 = stats::prcomp(Facp_input, scale. = TRUE)  #t(normds1()[,-1])
         r_values$acp1 <- acp1
         
         r_values$summary_acp <- summary(acp1)
         
-        print(colnames(r_values$acp1$x))
+        # print(colnames(r_values$acp1$x))
         acp1
         
       }else{print("NON UNIQUE FEATURES in table.")
@@ -710,6 +720,12 @@ mod_Inputs_server <- function(id, r = r, session = session){
       bp1$p
     })
     
+    output$boxplotly1 <- renderPlotly({
+      req(boxplot1())
+      bp1 <- boxplot1()
+      ggplotly(bp1$p)
+    })
+    
     # Export all figures
     
     pdfall <- reactive({
@@ -813,10 +829,10 @@ mod_Inputs_server <- function(id, r = r, session = session){
       req(boxplot1())
       
       Amelt <- boxplot1()$tabF_melt2
-
       pval_table <- data.frame()
       for(feat1 in unique(Amelt$features)){
         Ftabtest = na.omit(Amelt[Amelt$features == feat1,])
+        if(nrow(Ftabtest)==0){next}
         wcoxtab = pairwise.wilcox.test(Ftabtest[Ftabtest$features == feat1,"value"], as.factor(Ftabtest[,boxplot1()$fact3ok]),
                                        p.adjust.method = "none")
 
