@@ -313,9 +313,10 @@ mod_Inputs_server <- function(id, r = r, session = session){
      
       cat(file=stderr(), 'PONDERATION', "\n")
       req(r_values$subsetds1, input$norm1fact1, metadata1(), input$norm_method)
+      
       ds0 <- r_values$subsetds1
       class1 <- sapply(ds0, class)
-      ds1 <- ds0[,class1 == "numeric"]
+      ds1 <- ds0[,class1 == "numeric" | class1 == "integer"]
       r_values$wgt1 <- input$norm1fact1
       print(prev(ds1))
       
@@ -341,7 +342,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       }
       
       if(input$norm_method == 1){
-        normf = function(x){ x/sum(x) }
+        normf = function(x){ x/sum(x, na.rm = TRUE) }
         # normds1 <- transform_sample_counts(ds1, normf)
         normds1 <- apply(ds1, 2, normf)
       }
