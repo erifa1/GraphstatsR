@@ -16,7 +16,7 @@ app_ui <- function(request) {
     # )
     dashboardPage(skin = "red",
                   dashboardHeader(
-                    title = "GraphStats",
+                    title = "GraphStatsR",
                     tags$li(class="dropdown",tags$a(icon("gitlab"), headerText = "Source code",href="https://forgemia.inra.fr/etienne.rifa/graphstats", target="_blank")),
                     tags$li(class="dropdown",tags$a(icon("clinic-medical"), headerText = "Issues",href="https://forgemia.inra.fr/etienne.rifa/graphstats/-/issues", target="_blank"))#,
                     # tags$li(class="dropdown",tags$a(icon("twitter"), headerText = "Share", href="
@@ -68,7 +68,7 @@ golem_add_external_resources <- function(){
     favicon(),
     bundle_resources(
       path = app_sys('app/www'),
-      app_title = 'graphstats'
+      app_title = 'graphstatsr'
     ),
     # Add here other external resources
     # for example, you can add shinyalert::useShinyalert()
