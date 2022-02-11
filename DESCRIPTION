@@ -1,5 +1,5 @@
-Package: graphstats
-Title: graphstats
+Package: graphstatsr
+Title: graphstatsr
 Version: 1.0.1
 Authors@R: 
     person(given = "Etienne",

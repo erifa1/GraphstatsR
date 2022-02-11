@@ -248,6 +248,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     output$prevds1 <- renderPrint({
       cat(file = stderr(), 'rendering ds1', "\n")
       cat('Running graphstats v1.0.1\n')
+      cat(glue::glue("Features table with {nrow(dataset1())} rows and {ncol(dataset1())} columns.\n\n"))
       head(dataset1()[, 1:6])
       if (is.null(dataset1())) {
         print("no data")
@@ -256,10 +257,14 @@ mod_Inputs_server <- function(id, r = r, session = session){
       } else{
         head(dataset1()[, 1:ncol(dataset1())])
       }
+
+
     })
     
     output$prevmt1 <- renderPrint({
       cat(file = stderr(), 'rendering mt1', "\n")
+      cat(glue::glue("\nMetadata table with {nrow(metadata1())} rows and {ncol(metadata1())} columns.\n\n"))
+      
       if (is.null(metadata1())) {
         print("no data")
       } else if (ncol(metadata1()) > 6) {
@@ -267,7 +272,8 @@ mod_Inputs_server <- function(id, r = r, session = session){
       } else{
         head(metadata1()[, 1:ncol(metadata1())])
       }
-      
+
+
     })
     
     # Datatable with reactive filters & button
@@ -491,6 +497,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       acp_input <- na.omit(r_values$features_final)
       r_values$snaomit <- setdiff(row.names(r_values$features_final),row.names(acp_input))
       r_values$snaomit_att <- "sample(s)"
+      r_values$snaomit_ndim <- nrow(r_values$features_final)
       }
       
       if(input$naomit_method == 1){
@@ -499,6 +506,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
         acp_input <- t(Tfeat_ok)
         r_values$snaomit <- setdiff(row.names(Tfeat),row.names(Tfeat_ok))
         r_values$snaomit_att <- "feature(s)"
+        r_values$snaomit_ndim <- ncol(r_values$features_final)
       }
       
       if(nrow(acp_input) == 0){
@@ -543,7 +551,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       req(r_values$snaomit,r_values$snaomit_att)
       cat(file = stderr(), 'missing values', "\n")
         list1 <- glue_collapse(r_values$snaomit, ", ")
-        glue::glue("Following {r_values$snaomit_att} were omitted for PCA:\n{list1}")
+        glue::glue("Following {r_values$snaomit_att} were omitted for PCA ({length(r_values$snaomit)}/{r_values$snaomit_ndim}):\n{list1}")
      })
     
     # Generate ACP Table
