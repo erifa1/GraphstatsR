@@ -232,11 +232,10 @@ mod_Inputs_server <- function(id, r = r, session = session){
         # options(encoding = "UTF-8")
         # options(digits = 4, scipen = -2)
         ds1 <- read.table(input$dataset1$datapath, sep = "\t", dec = ".", header = TRUE, stringsAsFactors = TRUE)
-
+        ds1 <- replace_mu(ds1)
         row.names(ds1) <- glue::glue("{ds1[,1]}__{ds1[,3]}")
+        r_values$ds1 <- ds1
         # print(unique(ds1[,3]))
-        r_values$ds1 <- replace_mu(ds1)
-        
       }
       # else{
       #   print("no data")
