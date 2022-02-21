@@ -216,18 +216,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     # Input Dataset
     dataset1 <- reactive({
       cat(file=stderr(), 'dataset1 fun', "\n")
-      replace_mu <- function(x){
-        for(i in 1:ncol(x)){
-          if(is.factor(x[,i])){
-            x[,i] <- as.factor(gsub("microg", "\u00b5g", x[,i]))
-            x[,i] <- as.factor(gsub("microM", "\u00b5M", x[,i]))
-            x[,i] <- as.factor(gsub("\xb5", "\u00b5", x[,i]))
-          }
-        }
-        return(x)
-      }
-      
-      
+
       if (!is.null(input$dataset1)){
         # options(encoding = "UTF-8")
         # options(digits = 4, scipen = -2)
@@ -259,7 +248,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     # Preview
     output$prevds1 <- renderPrint({
       cat(file = stderr(), 'rendering ds1', "\n")
-      cat('Running graphstatsr v1.0.1\n')
+      cat('Running graphstatsr v1.0.2\n')
       cat(glue::glue("Features table with {nrow(dataset1())} rows and {ncol(dataset1())} columns.\n\n"))
       head(dataset1()[, 1:6])
       if (is.null(dataset1())) {
@@ -317,12 +306,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     
     # Normalization & button
     normds1 <- eventReactive(input$norm,{
-      prev <- function(x){
-        if(nrow(x)>10){nr = 10}else{nr = nrow(x)}
-        if(ncol(x)>10){nc = 10}else{nc = ncol(x)}
-        x[1:nr,1:nc]
-      }
-     
+
       cat(file=stderr(), 'PONDERATION', "\n")
       req(r_values$subsetds1, input$norm1fact1, metadata1(), input$norm_method)
       
@@ -811,9 +795,9 @@ mod_Inputs_server <- function(id, r = r, session = session){
       #calculate quantiles by grouping variable
       Amelt <- boxplot1()$tabF_melt2
       print(head(Amelt))
-      
       for(i in unique(Amelt$features)){
-        boxstat1 <- na.omit(Amelt[Amelt$features == i,]) %>%
+        boxstat1 <- Amelt[Amelt$features == i,] %>%
+          filter(!is.na(value)) %>%
           group_by(.dots = boxplot1()$fact3ok) %>%
           summarize(min = min(value),
                     quant25 = quantile(value, probs = q[1]),
@@ -828,6 +812,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       }
       cat(file=stderr(), 'BOXPLOT summary done', "\n")
       print(head(boxstat))
+      
       as.data.frame(boxstat)
     })
     
@@ -850,17 +835,22 @@ mod_Inputs_server <- function(id, r = r, session = session){
       req(boxplot1())
       
       Amelt <- boxplot1()$tabF_melt2
+      
       pval_table <- data.frame()
       for(feat1 in unique(Amelt$features)){
-        Ftabtest = na.omit(Amelt[Amelt$features == feat1,])
+        Ftabtest = Amelt[Amelt$features == feat1,] %>%
+          filter(!is.na(value)) 
         if(nrow(Ftabtest)==0){next}
+        if(length(which(table(Ftabtest[Ftabtest$features == feat1,boxplot1()$fact3ok]) >= 3)) < 2){next} # si moins de 2 groupes avec au moins 3 repetitions next.
+        print(feat1)
+        print(table(Ftabtest[Ftabtest$features == feat1,boxplot1()$fact3ok]))
         wcoxtab = pairwise.wilcox.test(Ftabtest[Ftabtest$features == feat1,"value"], as.factor(Ftabtest[,boxplot1()$fact3ok]),
                                        p.adjust.method = "none")
-
+        
         ftable1 <- as.data.frame(wcoxtab$p.value) %>%
           rownames_to_column() %>% pivot_longer(!rowname, names_to = "condition", values_to = "pvalue") %>%
           na.omit() %>% add_column(Features = feat1, .after = 0)
-
+        
         pval_table <- rbind.data.frame(pval_table, ftable1)
       }
       colnames(pval_table) = c("Features", "Condition1", "Condition2", "pvalue")
