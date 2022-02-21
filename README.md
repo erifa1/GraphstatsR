@@ -47,5 +47,5 @@ remotes::install_gitlab(repo = "etienne.rifa/graphstats", host = "forgemia.inra.
 
 # To run app
 library(graphstatsr)
-graphstats::run_app()
+graphstatsr::run_app()
 ```

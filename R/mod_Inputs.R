@@ -216,14 +216,26 @@ mod_Inputs_server <- function(id, r = r, session = session){
     # Input Dataset
     dataset1 <- reactive({
       cat(file=stderr(), 'dataset1 fun', "\n")
+      replace_mu <- function(x){
+        for(i in 1:ncol(x)){
+          if(is.factor(x[,i])){
+            x[,i] <- as.factor(gsub("microg", "\u00b5g", x[,i]))
+            x[,i] <- as.factor(gsub("microM", "\u00b5M", x[,i]))
+            x[,i] <- as.factor(gsub("\xb5", "\u00b5", x[,i]))
+          }
+        }
+        return(x)
+      }
+      
+      
       if (!is.null(input$dataset1)){
         # options(encoding = "UTF-8")
         # options(digits = 4, scipen = -2)
-        
         ds1 <- read.table(input$dataset1$datapath, sep = "\t", dec = ".", header = TRUE, stringsAsFactors = TRUE)
-        ds1$unite <- as.factor(gsub("microg", "\u00b5g", ds1$unite))
+
         row.names(ds1) <- glue::glue("{ds1[,1]}__{ds1[,3]}")
-        r_values$ds1 <- ds1
+        # print(unique(ds1[,3]))
+        r_values$ds1 <- replace_mu(ds1)
         
       }
       # else{
@@ -236,7 +248,8 @@ mod_Inputs_server <- function(id, r = r, session = session){
     metadata1 <- reactive({
       cat(file=stderr(), 'metadata1 fun', "\n")
       if (!is.null(input$metadata1)){
-        r_values$mt1 <- read.table(input$metadata1$datapath, sep = "\t", dec = ".", header = TRUE, stringsAsFactors = TRUE)
+        mt0 <- read.table(input$metadata1$datapath, sep = "\t", dec = ".", header = TRUE, stringsAsFactors = TRUE)
+        r_values$mt1 <- replace_mu(mt0)
       }else{
         cat(file=stderr(), 'metadata1 is null', "\n")
         r_values$mt1 = NULL
