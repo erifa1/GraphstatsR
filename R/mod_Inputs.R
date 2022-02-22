@@ -21,6 +21,7 @@
 #' @importFrom glue glue
 #' @importFrom reshape2 melt
 #' @importFrom shinyalert shinyalert
+#' @importFrom ggrepel geom_text_repel
 #' @import shinyWidgets
 #' @import ggplot2
 #' @import DT
@@ -172,6 +173,11 @@ mod_Inputs_ui <- function(id){
                          label = "Feature to plot in boxplot:",
                          choices = ""
                        ),
+                       selectInput(
+                         ns("nbPicPage"),
+                         label = "Select number of plot per pdf page (max 4 per page):",
+                         choices = c(1:4), selected = 1
+                       ),
                        actionButton(ns("go4"), "Just plot", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
                        actionButton(ns("go3"), "Run plot/stats & tests", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
                        downloadButton(outputId = ns("boxplots_download"), label = "Download all plots (long process)")
@@ -179,7 +185,7 @@ mod_Inputs_ui <- function(id){
                  ),
                  # fluidRow(
                  #   box(title = "Boxplot:", width = 12, status = "warning", solidHeader = TRUE,
-                 #       plotOutput(ns("boxplot1"), height = "500")
+                 #       plotOutput(ns("boxplot_out"), height = "500")
                  #   )
                  # ),
                  fluidRow(
@@ -248,7 +254,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     # Preview
     output$prevds1 <- renderPrint({
       cat(file = stderr(), 'rendering ds1', "\n")
-      cat('Running graphstatsr v1.0.2\n')
+      cat('Running graphstatsr v1.1.0\n')
       cat(glue::glue("Features table with {nrow(dataset1())} rows and {ncol(dataset1())} columns.\n\n"))
       head(dataset1()[, 1:6])
       if (is.null(dataset1())) {
@@ -284,7 +290,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
       dataset1() %>% mutate(across(where(is.numeric), round, 3))
     }, filter="top",
     options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback), 
-    columnDefs = list(list(targets = 3, width = '200px'), list(targets = 1, width = '100px')), autoWidth = TRUE, server=TRUE))
+    columnDefs = list(list(targets = 3, width = '200px'), list(targets = 2, width = '200px'), list(targets = 1, width = '100px')), autoWidth = TRUE, server=TRUE))
     
     subset_metabo <- reactive({
       req(dataset1())
@@ -410,8 +416,14 @@ mod_Inputs_server <- function(id, r = r, session = session){
     # Merged datatable for filtering.
     output$mergedf_DT <- DT::renderDataTable({
       mergedf() %>% mutate(across(where(is.numeric), round, 3))
-    }, filter="top",options = list(pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback)), server=TRUE,
-    extensions = "Select", selection = "multiple", callback = JS(callback))
+    }, filter="top",
+    options = list(
+      columnDefs = list(list(targets = 1, width = '150px'), list(targets = 2, width = '150px'),
+                        list(targets = 3, width = '150px'),list(targets = 4, width = '150px'),
+                        list(targets = 5, width = '150px')),
+      pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback), server=TRUE, autoWidth = TRUE),
+    extensions = "Select", selection = "multiple", callback = JS(callback)
+    )
     
     observe({
       print(input[["mergedf_DT_rows_selected"]])
@@ -706,29 +718,51 @@ mod_Inputs_server <- function(id, r = r, session = session){
         ytitle <- glue::glue("{ytitle}, norm.: {r_values$norm1}")
       }
       
-      p <- ggplot(tabF_melt2[tabF_melt2$features == input$feat1,], aes_string(x = fact3ok, y = "value", fill = fact3ok)) + 
-        geom_boxplot() + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(input$feat1) +
-        theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1))
+      is_outlier <- function(x) {
+        return(x < quantile(x, 0.25) - 1.5 * IQR(x) | x > quantile(x, 0.75) + 1.5 * IQR(x))
+      }
+      
+      fun <-  glue::glue('tabfeat = tabF_melt2[tabF_melt2$features == input$feat1,] %>% filter(!is.na(value)) %>% 
+        group_by({fact3ok}) %>% 
+        mutate(outlier=ifelse(is_outlier(value), sample.id, NA))')
+      eval(parse(text=fun))
+      
+     fun <-  glue::glue('p <- ggplot(tabfeat, aes(x = {fact3ok}, y = value)) + 
+        geom_boxplot(fill = "#99AFE3") + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(input$feat1) +
+        theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1))')
+      eval(parse(text=fun))
+      
+      # Hoverinfo
+      tabfeat$sample.id <- as.character(tabfeat$sample.id)
+      ggly <- ggplotly(p)
+      hoverinfo <- with(tabfeat, paste0("sample: ", sample.id, "</br></br>", 
+                                      "value: ", value))
+      ggly$x$data[[1]]$text <- hoverinfo
+      ggly$x$data[[1]]$hoverinfo <- c("text", "boxes")
+      
+      
       cat(file=stderr(), 'BOXPLOT done', "\n")
       
       outlist = list()
       outlist$p <- p
       outlist$tabF_melt2 <- tabF_melt2
       outlist$fact3ok <- fact3ok
-      
+      outlist$ggly <- ggly
+
       outlist
     })
     
-    output$boxplot1 <- renderPlot({
-      req(boxplot1())
-      bp1 <- boxplot1()
-      bp1$p
-    })
+    # output$boxplot_out <- renderPlot({
+    #   req(boxplot1())
+    #   bp1 <- boxplot1()
+    #   
+    #   bp1$p
+    # })
     
     output$boxplotly1 <- renderPlotly({
       req(boxplot1())
       bp1 <- boxplot1()
-      ggplotly(bp1$p)
+      ggplotly(bp1$ggly)
     })
     
     # Export all figures
@@ -739,9 +773,14 @@ mod_Inputs_server <- function(id, r = r, session = session){
 
         fact3ok <- r_values$fact3ok
         tabF_melt2 <- r_values$tabF_melt2
+        tabF_melt2$sample.id <- as.character(tabF_melt2$sample.id)
         listP <- list()
         FEAT = levels(tabF_melt2$features)
         print(head(FEAT))
+        
+        is_outlier <- function(x) {
+          return(x < quantile(x, 0.25) - 1.5 * IQR(x) | x > quantile(x, 0.75) + 1.5 * IQR(x))
+        }
 
         for(i in 1:length(FEAT)){
           
@@ -755,9 +794,24 @@ mod_Inputs_server <- function(id, r = r, session = session){
           if(r_values$norm1 != "Raw"){
             ytitle <- glue::glue("{ytitle}, norm.: {r_values$norm1}")
           }
-          listP[[i]] <- ggplot(tabF_melt2[tabF_melt2$features == FEAT[i],], aes_string(x = fact3ok, y = "value", fill = fact3ok)) + 
-            geom_boxplot() + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(FEAT[i]) + 
-            theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1))
+          
+          fun <-  glue::glue('tabfeat = tabF_melt2[tabF_melt2$features == FEAT[i],] %>% filter(!is.na(value)) %>% 
+                  group_by({fact3ok}) %>% 
+                  mutate(outlier=ifelse(is_outlier(value), sample.id, NA))')
+          eval(parse(text=fun))
+          if(nrow(tabfeat) == 0){print("no data"); next}
+          
+          fun <-  glue::glue('listP[[FEAT[i]]] <- ggplot(tabfeat, aes(x = {fact3ok}, y = value)) + 
+        geom_boxplot(fill = "#99AFE3") + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(FEAT[i]) +
+        theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1)) + 
+        ggrepel::geom_text_repel(aes(label = outlier), na.rm = TRUE, show.legend = F, 
+                             direction = "both",
+                             nudge_x = 0.1,
+                             size= 3
+                             )')
+          eval(parse(text=fun))
+          
+          print(length(listP))
         }
       
       print(length(listP))
@@ -774,7 +828,12 @@ mod_Inputs_server <- function(id, r = r, session = session){
         print('pdf output')
         
         withProgress({
-          ml <- marrangeGrob(p, nrow=1, ncol=1)
+          if(as.numeric(input$nbPicPage) < 4){
+            ml <- marrangeGrob(p, nrow= 1, ncol=as.numeric(input$nbPicPage))
+          }else{
+            ml <- marrangeGrob(p, nrow=2, ncol=2)
+          }
+          
           ggsave(file, ml, units = "cm", width = 20, height = 15, dpi = 300)
         }, message = "Prepare pdf file... please wait.")
 
