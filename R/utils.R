@@ -22,3 +22,11 @@ prev <- function(x){
   x[1:nr,1:nc]
 }
 
+#' Detect outlier from numeric vector
+#' @param x a vector
+#' 
+is_outlier <- function(x) {
+vec0 = x < quantile(x, 0.25, na.rm = TRUE) - 1.5 * IQR(x, na.rm = TRUE) | x > quantile(x, 0.75, na.rm = TRUE) + 1.5 * IQR(x, na.rm = TRUE)
+vec0[is.na(vec0)] <- FALSE
+return(vec0)
+}

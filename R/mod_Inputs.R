@@ -178,6 +178,7 @@ mod_Inputs_ui <- function(id){
                          label = "Select number of plot per pdf page (max 4 per page):",
                          choices = c(1:4), selected = 1
                        ),
+                       materialSwitch(ns("plotall"), label = "Plot all conditions (even NAs)", value = TRUE, status = "primary"),
                        actionButton(ns("go4"), "Just plot", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
                        actionButton(ns("go3"), "Run plot/stats & tests", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
                        downloadButton(outputId = ns("boxplots_download"), label = "Download all plots (long process)")
@@ -254,7 +255,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     # Preview
     output$prevds1 <- renderPrint({
       cat(file = stderr(), 'rendering ds1', "\n")
-      cat('Running graphstatsr v1.1.0\n')
+      cat('Running graphstatsr v1.2.0\n')
       cat(glue::glue("Features table with {nrow(dataset1())} rows and {ncol(dataset1())} columns.\n\n"))
       head(dataset1()[, 1:6])
       if (is.null(dataset1())) {
@@ -718,27 +719,27 @@ mod_Inputs_server <- function(id, r = r, session = session){
         ytitle <- glue::glue("{ytitle}, norm.: {r_values$norm1}")
       }
       
-      is_outlier <- function(x) {
-        return(x < quantile(x, 0.25) - 1.5 * IQR(x) | x > quantile(x, 0.75) + 1.5 * IQR(x))
-      }
-      
-      fun <-  glue::glue('tabfeat = tabF_melt2[tabF_melt2$features == input$feat1,] %>% filter(!is.na(value)) %>% 
+      fun <-  glue::glue('tabfeat = tabF_melt2[tabF_melt2$features == input$feat1,] %>% 
         group_by({fact3ok}) %>% 
-        mutate(outlier=ifelse(is_outlier(value), sample.id, NA))')
+        mutate(outlier=ifelse(is_outlier(value), as.character(sample.id), NA))')
       eval(parse(text=fun))
-      
+
+      if(!input$plotall){
+        tabfeat <- tabfeat %>% filter(!is.na(value))
+      }
+
      fun <-  glue::glue('p <- ggplot(tabfeat, aes(x = {fact3ok}, y = value)) + 
         geom_boxplot(fill = "#99AFE3") + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(input$feat1) +
         theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1))')
       eval(parse(text=fun))
-      
-      # Hoverinfo
-      tabfeat$sample.id <- as.character(tabfeat$sample.id)
       ggly <- ggplotly(p)
-      hoverinfo <- with(tabfeat, paste0("sample: ", sample.id, "</br></br>", 
-                                      "value: ", value))
-      ggly$x$data[[1]]$text <- hoverinfo
-      ggly$x$data[[1]]$hoverinfo <- c("text", "boxes")
+      
+      # # Hoverinfo BUG
+      # tabfeat$sample.id <- as.character(tabfeat$sample.id)
+      # hoverinfo <- with(tabfeat, paste0("sample: ", sample.id, "</br></br>", 
+      #                                 "value: ", value))
+      # ggly$x$data[[1]]$text <- hoverinfo
+      # ggly$x$data[[1]]$hoverinfo <- c("text", "boxes")
       
       
       cat(file=stderr(), 'BOXPLOT done', "\n")
@@ -777,10 +778,6 @@ mod_Inputs_server <- function(id, r = r, session = session){
         listP <- list()
         FEAT = levels(tabF_melt2$features)
         print(head(FEAT))
-        
-        is_outlier <- function(x) {
-          return(x < quantile(x, 0.25) - 1.5 * IQR(x) | x > quantile(x, 0.75) + 1.5 * IQR(x))
-        }
 
         for(i in 1:length(FEAT)){
           
@@ -795,10 +792,15 @@ mod_Inputs_server <- function(id, r = r, session = session){
             ytitle <- glue::glue("{ytitle}, norm.: {r_values$norm1}")
           }
           
-          fun <-  glue::glue('tabfeat = tabF_melt2[tabF_melt2$features == FEAT[i],] %>% filter(!is.na(value)) %>% 
+          fun <-  glue::glue('tabfeat = tabF_melt2[tabF_melt2$features == FEAT[i],] %>% 
                   group_by({fact3ok}) %>% 
                   mutate(outlier=ifelse(is_outlier(value), sample.id, NA))')
           eval(parse(text=fun))
+
+           if(!input$plotall){
+              tabfeat <- tabfeat %>% filter(!is.na(value))
+            }
+
           if(nrow(tabfeat) == 0){print("no data"); next}
           
           fun <-  glue::glue('listP[[FEAT[i]]] <- ggplot(tabfeat, aes(x = {fact3ok}, y = value)) + 
