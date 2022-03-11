@@ -94,6 +94,7 @@ mod_Inputs_ui <- function(id){
             fluidRow(
               box(width=12,
                 title = 'Merged Table preview', status = "primary", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+                h4(icon("info-circle"), "Click on rows to filter some samples 'outliers'."),
                 DT::dataTableOutput(ns("mergedf_DT")),
                 shinyBS::bsButton(inputId = ns('update_samples'), label = "Update samples filter", block = F, style = 'danger', type='action'),
                 downloadButton(outputId = ns("mergedf_download"), label = "Download merged table")
@@ -255,7 +256,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     # Preview
     output$prevds1 <- renderPrint({
       cat(file = stderr(), 'rendering ds1', "\n")
-      cat('Running graphstatsr v1.2.0\n')
+      cat('Running graphstatsr v1.3.0\n')
       cat(glue::glue("Features table with {nrow(dataset1())} rows and {ncol(dataset1())} columns.\n\n"))
       head(dataset1()[, 1:6])
       if (is.null(dataset1())) {
@@ -398,20 +399,20 @@ mod_Inputs_server <- function(id, r = r, session = session){
     )
     
     
-    # function for selecting row
-    callback <- c(
-      "var id = $(table.table().node()).closest('.datatables').attr('id');",
-      "table.on('click', 'tbody', function(){",
-      "  setTimeout(function(){",
-      "    var indexes = table.rows({selected:true}).indexes();",
-      "    var indices = Array(indexes.length);",
-      "    for(var i = 0; i < indices.length; ++i){",
-      "      indices[i] = indexes[i];",
-      "    }",
-      "    Shiny.setInputValue(id + '_rows_selected', indices);",
-      "  }, 0);",
-      "});"
-    )
+    # # function for selecting row
+    # callback <- c(
+    #   "var id = $(table.table().node()).closest('.datatables').attr('id');",
+    #   "table.on('click', 'tbody', function(){",
+    #   "  setTimeout(function(){",
+    #   "    var indexes = table.rows({selected:true}).indexes();",
+    #   "    var indices = Array(indexes.length);",
+    #   "    for(var i = 0; i < indices.length; ++i){",
+    #   "      indices[i] = indexes[i];",
+    #   "    }",
+    #   "    Shiny.setInputValue(id + '_rows_selected', indices);",
+    #   "  }, 0);",
+    #   "});"
+    # )
     
     
     # Merged datatable for filtering.
@@ -423,14 +424,17 @@ mod_Inputs_server <- function(id, r = r, session = session){
                         list(targets = 3, width = '150px'),list(targets = 4, width = '150px'),
                         list(targets = 5, width = '150px')),
       pageLength = 5, scrollX = TRUE, rowCallback = DT::JS(rowCallback), server=TRUE, autoWidth = TRUE),
-    extensions = "Select", selection = "multiple", callback = JS(callback)
+    extensions = "Select", selection = "multiple"#, callback = JS(callback)
     )
     
-    observe({
-      print(input[["mergedf_DT_rows_selected"]])
+    
+    outliers <- reactive({
+      r_values$outliers <- input[["mergedf_DT_rows_selected"]]
+      print("reactive outliers")
+      print(r_values$outliers)
+      r_values$outliers
     })
-    
-    
+
     subset_merged <- reactive({
       
       req(mergedf())
@@ -439,6 +443,15 @@ mod_Inputs_server <- function(id, r = r, session = session){
       Fdataset <- mergedf()[input$mergedf_DT_rows_all,]
       cat(file=stderr(), 'number of samples after',nrow(Fdataset), "\n")
       row.names(Fdataset) <- Fdataset[,1] # sample.id
+
+      if( !is.null(outliers()) ){
+        print("OUTLIERS SELECTED")
+        print(nrow(Fdataset))
+        Fdataset <- Fdataset[-outliers(), ]
+        print(nrow(Fdataset))
+        showNotification(glue::glue("{length(outliers())} outlier(s) filtered..."), type="message", duration = 5)
+      }
+
       r_values$subsetds_final <- Fdataset
       
       # melt final dataset for boxplot
