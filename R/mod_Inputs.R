@@ -228,9 +228,9 @@ mod_Inputs_server <- function(id, r = r, session = session){
       if (!is.null(input$dataset1)){
         # options(encoding = "UTF-8")
         # options(digits = 4, scipen = -2)
-        ds1 <- read.table(input$dataset1$datapath, sep = "\t", dec = ".", header = TRUE, stringsAsFactors = TRUE)
+        ds1 <- read.csv(input$dataset1$datapath, sep = "\t", dec = ".", header = TRUE, stringsAsFactors = TRUE)
         ds1 <- replace_mu(ds1)
-        row.names(ds1) <- glue::glue("{ds1[,1]}__{ds1[,3]}")
+        row.names(ds1) <- glue::glue("{ds1[,1]}__{ds1[,2]}__{ds1[,3]}")
         r_values$ds1 <- ds1
         # print(unique(ds1[,3]))
       }
@@ -244,7 +244,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     metadata1 <- reactive({
       cat(file=stderr(), 'metadata1 fun', "\n")
       if (!is.null(input$metadata1)){
-        mt0 <- read.table(input$metadata1$datapath, sep = "\t", dec = ".", header = TRUE, stringsAsFactors = TRUE)
+        mt0 <- read.csv(input$metadata1$datapath, sep = "\t", dec = ".", header = TRUE, stringsAsFactors = TRUE)
         r_values$mt1 <- replace_mu(mt0)
       }else{
         cat(file=stderr(), 'metadata1 is null', "\n")
@@ -256,7 +256,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     # Preview
     output$prevds1 <- renderPrint({
       cat(file = stderr(), 'rendering ds1', "\n")
-      cat('Running graphstatsr v1.3.0\n')
+      cat('Running graphstatsr v1.3.1\n')
       cat(glue::glue("Features table with {nrow(dataset1())} rows and {ncol(dataset1())} columns.\n\n"))
       head(dataset1()[, 1:6])
       if (is.null(dataset1())) {
@@ -327,7 +327,9 @@ mod_Inputs_server <- function(id, r = r, session = session){
       if(input$norm1fact1 == "Raw"){
         pondds1 <- ds1
       }else{
-        pondds1 <- t(apply(ds1, 1, function(x){x/metadata1()[[input$norm1fact1]]}))
+        fp1 = metadata1()[[input$norm1fact1]]
+        fp1[fp1 == 0] <- NA
+        pondds1 <- t(apply(ds1, 1, function(x){x/fp1}))
       }
       
       print(prev(pondds1))

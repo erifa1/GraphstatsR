@@ -1,6 +1,6 @@
 Package: graphstatsr
 Title: graphstatsr
-Version: 1.3.0
+Version: 1.3.1
 Authors@R: 
     person(given = "Etienne",
            family = "Rifa",
@@ -15,6 +15,7 @@ Imports:
     DT,
     factoextra,
     ggplot2,
+    ggrepel,
     glue,
     golem (>= 0.3.1),
     gridExtra,
@@ -30,6 +31,10 @@ Imports:
     stringr,
     tibble,
     tidyr
+Suggests: 
+    graphstats,
+    spelling,
+    testthat
 Remotes:
     bioc::3.10/rhdf5
 Config/testthat/edition: 3
