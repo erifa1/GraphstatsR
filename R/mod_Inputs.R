@@ -256,7 +256,7 @@ mod_Inputs_server <- function(id, r = r, session = session){
     # Preview
     output$prevds1 <- renderPrint({
       cat(file = stderr(), 'rendering ds1', "\n")
-      cat('Running graphstatsr v1.3.1\n')
+      cat('Running graphstatsr v1.3.2\n')
       cat(glue::glue("Features table with {nrow(dataset1())} rows and {ncol(dataset1())} columns.\n\n"))
       head(dataset1()[, 1:6])
       if (is.null(dataset1())) {
@@ -526,7 +526,10 @@ mod_Inputs_server <- function(id, r = r, session = session){
       }
       
       if(input$naomit_method == 1){
-        Tfeat =t(r_values$features_final)
+        Tfeat0 =t(r_values$features_final)
+        allNA_index = apply(Tfeat0,2,function(x){all(is.na(x))})
+        Tfeat = Tfeat0[,!allNA_index]
+
         Tfeat_ok <- na.omit(Tfeat)
         acp_input <- t(Tfeat_ok)
         r_values$snaomit <- setdiff(row.names(Tfeat),row.names(Tfeat_ok))
