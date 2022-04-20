@@ -18,8 +18,9 @@ app_server <- function( input, output, session ) {
   
   
   # List the first level callModules here
-  # callModule(mod_Inputs_server, "Inputs_ui_1", session=session, r = r)
-  mod_Inputs_server("Inputs_ui_1")
-  # mod_idmschoice_server("idmschoice_ui_1")
+  mod_inputs_server("inputs_1", session=session, r=r)
+  mod_acp_server("acp_1", session=session, r=r)
+  mod_boxplots_server("boxplots_1", session=session, r=r)
+  # mod_idmschoice_server("idmschoice_ui_1", session=session, r=r)
   
 }

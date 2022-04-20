@@ -1,4 +1,4 @@
 library(testthat)
-library(graphstats)
+library(graphstatsr)
 
-test_check("graphstats")
+test_check("graphstatsr")
