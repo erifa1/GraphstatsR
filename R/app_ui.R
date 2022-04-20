@@ -16,7 +16,7 @@ app_ui <- function(request) {
     # )
     dashboardPage(skin = "red",
                   dashboardHeader(
-                    title = "GraphStatsR",
+                    title = "GraphStatsR 1.4.0",
                     tags$li(class="dropdown",tags$a(icon("gitlab"), headerText = "Source code",href="https://forgemia.inra.fr/etienne.rifa/graphstats", target="_blank")),
                     tags$li(class="dropdown",tags$a(icon("clinic-medical"), headerText = "Issues",href="https://forgemia.inra.fr/etienne.rifa/graphstats/-/issues", target="_blank"))#,
                     # tags$li(class="dropdown",tags$a(icon("twitter"), headerText = "Share", href="
@@ -26,22 +26,27 @@ app_ui <- function(request) {
                   dashboardSidebar(
                     sidebarMenu(
                       id="tabs",
-                      style = "position: fixed; overflow: visible",
-                      menuItem("Easy Stats", tabName= 'easystats', icon=icon("diagnoses"))#,
-                      # menuItem("IDMS choice", tabName= 'idmschoice', icon=icon("diagnoses"))
-                      # menuItem("Community Composition", tabName = "tab_compo", icon = icon("chart-pie"))
+                      menuItem("Easy Stats", tabName= 'easystats-tab', icon=icon("diagnoses"),
+                          startExpanded = TRUE,
+                          menuSubItem('Input data', tabName = 'inputs-tab'),
+                          menuSubItem('ACP', tabName = 'acp-tab'),
+                          menuSubItem('Boxplots', tabName = 'boxplot-tab')
+                          )
                     )
                   ),
                   
                   dashboardBody(
-                    
-                    tabItems(
-                      tabItem(tabName = 'easystats',
-                              mod_Inputs_ui("Inputs_ui_1")
-                      )#,
-                      # tabItem(tabName = 'idmschoice',
-                      #         mod_idmschoice_ui("idmschoice_ui_1")
-                      # )
+                    tags$head(includeCSS(system.file(file.path('app/www', 'style.css'), package='graphstatsr'))),
+                    tabItems(                               
+                      tabItem(tabName = 'inputs-tab',
+                              mod_inputs_ui("inputs_1")
+                      ),
+                      tabItem(tabName = 'acp-tab',
+                              mod_acp_ui("acp_1")
+                      ),
+                      tabItem(tabName = 'boxplot-tab',
+                              mod_boxplots_ui("boxplots_1")
+                      )
                     )
                   )
                   
@@ -72,7 +77,7 @@ golem_add_external_resources <- function(){
     ),
     # Add here other external resources
     # for example, you can add shinyalert::useShinyalert()
-    shinyalert::useShinyalert()
+    # shinyalert::useShinyalert()
   )
 }
 

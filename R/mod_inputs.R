@@ -1,0 +1,475 @@
+#' inputs UI Function
+#'
+#' @description A shiny Module.
+#'
+#' @param id,input,output,session Internal parameters for {shiny}.
+#'
+#' @noRd 
+#'
+#' @importFrom shiny NS tagList
+#' @import tibble 
+#' @import dplyr
+#' @import tidyr
+#' @importFrom gridExtra marrangeGrob
+#' @importFrom plotly plotlyOutput
+#' @importFrom plotly renderPlotly
+#' @importFrom plotly ggplotly
+#' @importFrom plotly config
+#' @importFrom factoextra fviz_pca_var
+#' @importFrom factoextra get_pca_var
+#' @importFrom glue glue_collapse
+#' @importFrom glue glue
+#' @importFrom reshape2 melt
+#' @importFrom shinyalert shinyalert
+#' @importFrom ggrepel geom_text_repel
+#' @import shinyWidgets
+#' @import ggplot2
+#' @import DT
+#' @import datamods
+
+mod_inputs_ui <- function(id){
+  ns <- NS(id)
+  tagList(
+    fluidPage(
+
+      box(title = "Input features dataset", status = "warning", solidHeader = TRUE, width=12,
+         fluidRow(
+              column(
+                width = 12,
+                actionButton(ns("launch_modal"), "Features table input module", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")#,
+                # tags$b("Imported data:"),
+                # verbatimTextOutput(outputId = ns("name")),
+                # verbatimTextOutput(outputId = ns("data"))
+              )
+            ),
+              tags$h3("Use filters to subset on features:"),
+
+                fluidRow(
+                  column(
+                    width = 3,
+                    filter_data_ui(ns("filtering"), max_height = "500px")
+                  ),
+                  column(
+                    width = 9,
+                    progressBar(
+                      id = ns("pbar"), value = 100,
+                      total = 100, display_pct = TRUE
+                    ),
+                    DT::dataTableOutput(outputId = ns("table")),
+                    # tags$b("Code dplyr:"),
+                    # verbatimTextOutput(outputId = ns("code_dplyr")),
+                    # tags$b("Expression:"),
+                    # verbatimTextOutput(outputId = ns("code")),
+                    # tags$b("Filtered data:"),
+                    # verbatimTextOutput(outputId = ns("res_str"))
+                    tags$b("Outliers:"),
+                    verbatimTextOutput(outputId = ns("outliers"))
+                  )
+                )
+              ),
+          box(title = "Input metadata dataset", status = "warning", solidHeader = TRUE, width=12,
+              actionButton(ns("launch_modal2"), "Metadata input module", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
+              tags$h3("Use filters to subset on metadata, and click on rows you need to remove:"),
+              column(
+                width = 3,
+                filter_data_ui(ns("filtering2"), max_height = "500px")
+              ),
+              column(
+                width = 9,
+                progressBar(
+                  id = ns("pbar2"), value = 100,
+                  total = 100, display_pct = TRUE
+                ),
+                DT::dataTableOutput(outputId = ns("table2"))
+              ),                      
+              tags$b("Outlier(s) selected:"),
+              verbatimTextOutput(ns('x4'))
+            ),
+
+            box(title = "Normalization", status = "warning", solidHeader = TRUE, width = 3,
+                # verbatimTextOutput(ns('x4bis')),
+                selectInput(
+                  ns("norm1fact1"),
+                  label = "Numeric factor/covariable to weight features values with:",
+                  choices = ""
+                ),
+                radioButtons(
+                  ns("norm_method"),
+                  label = "Normalization : ",
+                  inline = TRUE,
+                  choices = list(
+                    "Raw" = 0 ,
+                    "TSS (total-sum normalization)" = 1,
+                    "CLR (center log-ration)" = 2
+                  ), selected = 0
+                ),
+                actionButton(ns("mergebutton"), "Merge features and metadata...", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
+              ),
+
+
+            box(title = "Final dataset", status = "primary", solidHeader = TRUE, width = 9,
+              DT::dataTableOutput(outputId = ns("mergetable_DT")),
+              downloadButton(outputId = ns("mergedf_download"), label = "Download merged table")
+              )
+
+      )
+ 
+  )
+}
+    
+#' inputs Server Functions
+#'
+#' @noRd 
+mod_inputs_server <- function(id, r = r, session = session){
+  moduleServer( id, function(input, output, session){
+
+    ns <- session$ns
+    r_values <- reactiveValues(subsetds_final = NULL, metadata_final = NULL, features_final = NULL, subsetds_final_melt = NULL)
+    imported <- NULL
+
+
+    # Input dataset dev 
+
+    observeEvent(input$launch_modal, {
+      r_values$subsetds_final <- "emptytable" # for shinyalert acp / boxplot
+      r_values$subsetds_final_melt <- "emptytable"
+
+      import_modal(
+        id = ns("myid"),
+        from = c("file", "env", "copypaste", "googlesheets", "url"),
+        title = "Import data to be used in application"
+      )
+    })
+
+    imported <- import_server("myid", return_class = "data.frame")
+
+    # output$name <- renderPrint({
+    #   req(imported$name())
+    #   imported$name()
+    # })
+
+    # output$data <- renderPrint({
+    #   req(imported$data())
+    #   as.tibble(imported$data())
+    # })
+
+
+    # Filters dev
+
+
+      data <- reactive({
+        imported$data()
+        
+        # dev
+        # read.csv("~/repository/graphstatsr/data_test/metabo_all_data_special.csv", sep ="\t")
+      })
+
+      # output$datainput <- renderPrint({
+      #   # imported$data()[1:10,1:10]
+      #   data()[1:10,]
+      # })
+
+      res_filter <- filter_data_server(
+        id = "filtering",
+        data = data,
+        name = reactive("feature_table"),
+        vars = reactive(NULL),
+        widget_num = "slider",
+        widget_date = "slider",
+        label_na = "Missing"
+      )
+
+      observeEvent(res_filter$filtered(), {
+        updateProgressBar(
+          session = session, id = "pbar",
+          value = nrow(res_filter$filtered()), total = nrow(data())
+        )
+      })
+
+      output$table <- DT::renderDT({
+        res_filter$filtered()
+      }, options = list(pageLength = 6, scrollX = TRUE))
+
+
+      output$code_dplyr <- renderPrint({
+        res_filter$code()
+      })
+      output$code <- renderPrint({
+        res_filter$expr()
+      })
+
+      output$res_str <- renderPrint({
+        str(res_filter$filtered())
+      })
+
+
+    # Input metadata dev 
+
+    observeEvent(input$launch_modal2, {
+      import_modal(
+        id = ns("myid2"),
+        from = c("file", "env", "copypaste", "googlesheets", "url"),
+        title = "Import data to be used in application"
+      )
+    })
+
+    imported2 <- import_server("myid2", return_class = "data.frame")
+
+    # output$name <- renderPrint({
+    #   req(imported$name())
+    #   imported$name()
+    # })
+
+    # output$data <- renderPrint({
+    #   req(imported$data())
+    #   as.tibble(imported$data())
+    # })
+
+
+    # Filters metadata dev
+
+
+      data2 <- reactive({
+        imported2$data()
+        
+        # dev
+        # read.csv("~/repository/graphstatsr/data_test/metadata_metabo.csv", sep ="\t")
+      })
+
+      res_filter2 <- filter_data_server(
+        id = "filtering2",
+        data = data2,
+        name = reactive("metadata_table"),
+        vars = reactive(NULL),
+        widget_num = "slider",
+        widget_date = "slider",
+        label_na = "Missing"
+      )
+
+      observeEvent(res_filter2$filtered(), {
+        updateProgressBar(
+          session = session, id = "pbar2",
+          value = nrow(res_filter2$filtered()), total = nrow(data2())
+        )
+      })
+
+
+        # Function for table filters
+      rowCallback <- c(
+        "function(row, data){",
+        "  for(var i=0; i<data.length; i++){",
+        "    if(data[i] === null){",
+        "      $('td:eq('+i+')', row).html('NA')",
+        "        .css({'color': 'rgb(151,151,151)', 'font-style': 'italic'});",
+        "    }",
+        "  }",
+        "}"
+      )
+
+      output$table2 <- DT::renderDT({
+        print(class(res_filter2$filtered()))
+        print(str(res_filter2$filtered()))
+        res_filter2$filtered()
+      }, 
+      options = list(
+        pageLength = 6, scrollX = TRUE, server=TRUE, autoWidth = FALSE)#, , rowCallback = DT::JS(rowCallback)
+      # extensions = "Select", selection = "multiple"
+      )
+
+      output$x4bis <- output$x4 <- renderPrint({
+        s = input$table2_rows_selected
+        if (length(s)) {
+          cat('These rows were selected:\n')
+          cat(s, sep = ', ')
+        }else{
+          cat("None")
+        }
+      })
+
+      outliers <- reactive({
+        r_values$outliers <- input[["table2_rows_selected"]]
+        print("reactive outliers")
+        print(r_values$outliers)
+        r_values$outliers
+      })
+
+      observe({
+        print(input[["table2_rows_selected"]])
+      })
+
+      # output$outliers <- renderPrint({
+      #   outliers()
+      # })
+
+      observe({
+        req(res_filter2$filtered()) #metadata
+        metadata1 <- res_filter2$filtered()
+        #Norm1
+        class1 <- sapply(metadata1, class)
+        r_values$norm1fact = names(metadata1)[class1 %in% "integer" | class1 %in% "numeric"]
+        updateSelectInput(session, "norm1fact1",
+                          choices = c("Raw", r_values$norm1fact),
+                          selected = c("Raw", r_values$norm1fact)[1]) #names(r_values$metadata_final)[1]
+      })
+
+
+      r$mergetable <- mergetable <- eventReactive(input$mergebutton, {
+        metadata1 <- res_filter2$filtered()
+        row.names(metadata1) <- metadata1[,"sample.id"]
+        feat1 <- res_filter$filtered()
+
+        print("Outliers:")
+        outliers1 <- input[["table2_rows_selected"]]
+        samplenames_out <- metadata1[input[["table2_rows_selected"]], "sample.id"]
+        print(outliers1)
+        # print(samplenames_out)
+
+        mt1 <- metadata1 %>% filter(!row_number() %in% outliers1)
+        # print(mt1$sample.id)
+        ds0 <- feat1 %>% select(-samplenames_out)
+        # print(colnames(ds0))
+
+
+
+        row.names(ds0) <- glue::glue("{ds0[,1]}__{ds0[,2]}__{ds0[,3]}")
+
+
+        cat(file=stderr(), 'PONDERATION', "\n")
+        
+        class1 <- sapply(ds0, class)
+        ds1 <- ds0[,class1 == "numeric" | class1 == "integer"]
+        # print(colnames(ds1))
+        r_values$wgt1 <- input$norm1fact1
+        # print(prev(ds1))
+        
+        if(input$norm1fact1 == "Raw"){
+          pondds1 <- ds1
+        }else{
+          fp1 = metadata1[colnames(ds1),input$norm1fact1]  # force same order between table
+          fp1[fp1 == 0] <- NA
+          pondds1 <- t(apply(ds1, 1, function(x){x/fp1}))
+        }
+        
+        # print(prev(pondds1))
+        # r_values$pondds1 <- pondds1
+        
+        
+        cat(file=stderr(), 'NORMALIZATION', "\n")
+        ds1 <- pondds1
+        # print(head(ds1))
+        norm_names = c("Raw", "TSS", "CLR")
+        r_values$norm1 <- norm_names[as.numeric(input$norm_method)+1]
+        print(r_values$norm1)
+
+        if(input$norm_method == 0){
+          normds1 <- ds1
+        }
+        
+        if(input$norm_method == 1){
+          normf = function(x){ x/sum(x, na.rm = TRUE) }
+          # normds1 <- transform_sample_counts(ds1, normf)
+          normds1 <- apply(ds1, 2, normf)
+        }
+        
+        if(input$norm_method == 2){
+          clr = function(x){log(x+1) - rowMeans(log(x+1), na.rm = TRUE)}
+          normds1 <- clr(ds1)
+        }
+        # save(list = ls(all.names = TRUE), file = "debug.rdata", envir = environment()); print("SAVE0")
+
+        print("Final data")
+
+        # Finale dataset
+        Fdataset <- as.data.frame(t(normds1)) %>% 
+        tibble::rownames_to_column(var = "sample.id") %>% 
+        dplyr::right_join(x = mt1, by = "sample.id")  # %>% mutate_if(is.character,as.factor)
+        row.names(Fdataset) <- Fdataset$sample.id
+        r_values$subsetds_final <- Fdataset
+
+        # melt final dataset for boxplot
+        r_values$subsetds_final_melt <- reshape2::melt(Fdataset, id.vars = 1:ncol(mt1), measure.vars = (ncol(mt1)+1):ncol(Fdataset), variable.name = "features")
+        
+
+        #for PCA
+        r_values$metadata_final <- droplevels(Fdataset[,1:ncol(mt1)])
+        # print(prev(r_values$metadata_final))
+        r_values$features_final <- Fdataset[,(ncol(mt1)+1):ncol(Fdataset)]
+        # print(prev(r_values$features_final))
+
+        showNotification("Dataset ready !", type="message", duration = 5)
+        Fdataset
+
+      })
+
+
+      output$mergetable_DT <- DT::renderDataTable({
+        mergetable()
+      }, 
+      options = list(
+        pageLength = 6, scrollX = TRUE,server=TRUE, autoWidth = TRUE)#, #, rowCallback = DT::JS(rowCallback), 
+      #extensions = "Select", selection = "multiple"
+      )
+
+      output$mergedf_download <- downloadHandler(
+        filename = "merged_table.csv",
+        content = function(file) {
+          req(r_values$subsetds_final)
+          write.csv(r_values$subsetds_final, file, sep=",", row.names=FALSE)
+        }
+      )
+
+
+      r$fdata <- reactive({
+        print("reactive r")
+        req(r_values$subsetds_final)
+        r_values$subsetds_final
+
+      })
+
+
+      r$mt1 <- reactive({
+        req(r_values$metadata_final)
+        r_values$metadata_final
+      })
+
+      r$ds1 <- reactive({
+        req(r_values$features_final)
+          r_values$features_final
+      })
+
+      r$fdata_melt <- reactive({
+        req(r_values$subsetds_final_melt)
+        r_values$subsetds_final_melt
+      })
+
+      r$wgt1 <- reactive({
+        req(r_values$wgt1)
+        r_values$wgt1
+      })
+      r$norm1 <- reactive({
+        req(r_values$norm1)
+        r_values$norm1
+      })
+
+
+
+
+      # output$code_dplyr <- renderPrint({
+      #   res_filter2$code()
+      # })
+      # output$code <- renderPrint({
+      #   res_filter2$expr()
+      # })
+
+      # output$res_str <- renderPrint({
+      #   str(res_filter2$filtered())
+      # })
+ 
+  })
+}
+    
+## To be copied in the UI
+# mod_inputs_ui("inputs_1")
+    
+## To be copied in the server
+# mod_inputs_server("inputs_1")
