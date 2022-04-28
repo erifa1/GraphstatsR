@@ -1,6 +1,6 @@
 Package: graphstatsr
 Title: graphstatsr
-Version: 1.4.0
+Version: 1.4.1
 Authors@R: 
     person("Etienne", "Rifa", , "etienne.rifa@insa-toulouse.fr", role = c("cre", "aut"))
 Description: A shiny app to easily generate advanced graphics and some non
