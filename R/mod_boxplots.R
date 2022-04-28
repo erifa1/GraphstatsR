@@ -110,21 +110,23 @@ mod_boxplots_server <- function(id, r = r, session = session){
       req(r$mt1(), r$fdata_melt())
       r_values$subsetds_final_melt <- r$fdata_melt()
       r_values$metadata_final <- r$mt1()
-      updateSelectInput(session, "feat1",
-                        choices = unique(r_values$subsetds_final_melt[,"features"]),
-                        selected = unique(r_values$subsetds_final_melt[,"features"])[1])
-      updateSelectInput(session, "fact2",
-                        choices = names(r_values$metadata_final),
-                        selected = names(r_values$metadata_final)[2])
-      updatePickerInput(session, "fact3",
-                        choices = names(r_values$metadata_final),
-                        selected = names(r_values$metadata_final)[2],
-                        options = list(
-                          `actions-box` = TRUE, 
-                          size = 10,
-                          `selected-text-format` = "count > 3"
-                        )
-      )
+      if(is.data.frame(r$fdata_melt())){
+        updateSelectInput(session, "feat1",
+                          choices = unique(r_values$subsetds_final_melt[,"features"]),
+                          selected = unique(r_values$subsetds_final_melt[,"features"])[1])
+        updateSelectInput(session, "fact2",
+                          choices = names(r_values$metadata_final),
+                          selected = names(r_values$metadata_final)[2])
+        updatePickerInput(session, "fact3",
+                          choices = names(r_values$metadata_final),
+                          selected = names(r_values$metadata_final)[2],
+                          options = list(
+                            `actions-box` = TRUE, 
+                            size = 10,
+                            `selected-text-format` = "count > 3"
+                          )
+        )
+      }
     })
 
     

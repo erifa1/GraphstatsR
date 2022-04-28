@@ -124,7 +124,9 @@ mod_inputs_server <- function(id, r = r, session = session){
   moduleServer( id, function(input, output, session){
 
     ns <- session$ns
-    r_values <- reactiveValues(subsetds_final = NULL, metadata_final = NULL, features_final = NULL, subsetds_final_melt = NULL)
+    r_values <- reactiveValues(merged = NULL, imported = NULL, imported2 = NULL, 
+      subsetds_final = NULL, metadata_final = NULL, 
+      features_final = NULL, subsetds_final_melt = NULL)
     imported <- NULL
 
 
@@ -133,10 +135,11 @@ mod_inputs_server <- function(id, r = r, session = session){
     observeEvent(input$launch_modal, {
       r_values$subsetds_final <- "emptytable" # for shinyalert acp / boxplot
       r_values$subsetds_final_melt <- "emptytable"
+      r_values$merged <- NULL
 
       import_modal(
         id = ns("myid"),
-        from = c("file", "env", "copypaste", "googlesheets", "url"),
+        from = c("file"), #, "env", "copypaste", "googlesheets", "url"
         title = "Import data to be used in application"
       )
     })
@@ -158,8 +161,8 @@ mod_inputs_server <- function(id, r = r, session = session){
 
 
       data <- reactive({
-        imported$data()
-        
+        r_values$imported <- imported$data()
+        imported$data()      
         # dev
         # read.csv("~/repository/graphstatsr/data_test/metabo_all_data_special.csv", sep ="\t")
       })
@@ -206,6 +209,8 @@ mod_inputs_server <- function(id, r = r, session = session){
     # Input metadata dev 
 
     observeEvent(input$launch_modal2, {
+      r_values$merged <- NULL
+
       import_modal(
         id = ns("myid2"),
         from = c("file", "env", "copypaste", "googlesheets", "url"),
@@ -230,6 +235,7 @@ mod_inputs_server <- function(id, r = r, session = session){
 
 
       data2 <- reactive({
+        r_values$imported2 <- imported2$data()
         imported2$data()
         
         # dev
@@ -267,8 +273,8 @@ mod_inputs_server <- function(id, r = r, session = session){
       )
 
       output$table2 <- DT::renderDT({
-        print(class(res_filter2$filtered()))
-        print(str(res_filter2$filtered()))
+        # print(class(res_filter2$filtered()))
+        # print(str(res_filter2$filtered()))
         res_filter2$filtered()
       }, 
       options = list(
@@ -314,6 +320,11 @@ mod_inputs_server <- function(id, r = r, session = session){
 
 
       r$mergetable <- mergetable <- eventReactive(input$mergebutton, {
+        print("merge")
+        if(is.null(r_values$imported) | is.null(r_values$imported2)){
+          showNotification("Please use modules for input files...", type="message", duration = 5)
+        }
+
         metadata1 <- res_filter2$filtered()
         row.names(metadata1) <- metadata1[,"sample.id"]
         feat1 <- res_filter$filtered()
@@ -403,6 +414,10 @@ mod_inputs_server <- function(id, r = r, session = session){
 
 
       output$mergetable_DT <- DT::renderDataTable({
+        # req(mergetable())
+        if(is.null(r_values$merged)){validate('\t\t\t\t\t\t\t\t\t\tValidate each step.')}
+        # print("rendermergeDT")
+
         mergetable()
       }, 
       options = list(
@@ -417,6 +432,11 @@ mod_inputs_server <- function(id, r = r, session = session){
           write.csv(r_values$subsetds_final, file, sep=",", row.names=FALSE)
         }
       )
+
+
+      observe({
+        r_values$merged <- mergetable()
+      })
 
 
       r$fdata <- reactive({
