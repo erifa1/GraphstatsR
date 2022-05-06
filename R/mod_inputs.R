@@ -36,9 +36,11 @@ mod_inputs_ui <- function(id){
          fluidRow(
               column(
                 width = 12,
-                actionButton(ns("launch_modal"), "Features table input module", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")#,
+                actionButton(ns("launch_modal"), "Features table input module", 
+                  icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469") #,
                 # tags$b("Imported data:"),
-                # verbatimTextOutput(outputId = ns("name")),
+                # verbatimTextOutput(outputId = ns("myid"))
+                # verbatimTextOutput(outputId = ns("name"))
                 # verbatimTextOutput(outputId = ns("data"))
               )
             ),
@@ -145,6 +147,11 @@ mod_inputs_server <- function(id, r = r, session = session){
     })
 
     imported <- import_server("myid", return_class = "data.frame")
+
+    output$myid <- renderPrint({
+      req(input$myid)
+      input$myid
+    })
 
     # output$name <- renderPrint({
     #   req(imported$name())

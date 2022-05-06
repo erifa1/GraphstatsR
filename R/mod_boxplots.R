@@ -48,15 +48,17 @@ mod_boxplots_ui <- function(id){
             ),
             textInput(ns("custom_ytitle"), "Custom y title", "None"),
             materialSwitch(ns("plotall"), label = "Plot all conditions (even NAs)", value = TRUE, status = "primary"),
-            materialSwitch(ns("outlier_labs"), label = "Inform outlier in pdf output", value = TRUE, status = "primary"),
             materialSwitch(ns("grey_mode"), label = "Colored boxplot", value = TRUE, status = "primary"),
+            materialSwitch(ns("outlier_labs"), label = "Inform outlier in pdf output", value = TRUE, status = "primary"),
+            materialSwitch(ns("pngs_out"), label = "Output png for each feature (long process)", value = FALSE, status = "primary"),
+            textInput(ns("outpath"), "Output path for pngs", ""),
             actionButton(ns("go3"), "Run plot/stats & tests", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
             actionButton(ns("go4"), "Update plot only", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
-            downloadButton(outputId = ns("boxplots_download"), label = "Download all plots (long process)")
+            downloadButton(outputId = ns("boxplots_download"), label = "Download pdf and pngs (long process)")
         ),
         box(title = "Reorder boxplots:", width = 5, status = "warning", solidHeader = TRUE, collapsible = TRUE,
-            uiOutput(ns("sortable")),
-            verbatimTextOutput(ns("results_sort"))
+            uiOutput(ns("sortable"))#,
+            # verbatimTextOutput(ns("results_sort"))
         )          
       ),
       # fluidRow(
@@ -126,6 +128,14 @@ mod_boxplots_server <- function(id, r = r, session = session){
                             `selected-text-format` = "count > 3"
                           )
         )
+        updateTextInput(
+          session = session,
+          "outpath",
+          label = "Output path for pngs",
+          value = getwd(),
+          placeholder = NULL
+        )
+
       }
     })
 
@@ -290,68 +300,79 @@ mod_boxplots_server <- function(id, r = r, session = session){
         FEAT = levels(tabF_melt2$features)
         print(head(FEAT))
 
-        for(i in 1:length(FEAT)){
-          
-          if(input$custom_ytitle == "None"){
+        withProgress({
+
+          for(i in 1:length(FEAT)){
+            incProgress(1/length(FEAT))
             tt <- stringr::str_split(FEAT[i], "__")
-            print(tt)
-            ytitle <- sapply(tt,"[[",2)
-            print(ytitle)
-            if(r$wgt1() != "Raw"){
-              ytitle <- glue::glue("{ytitle}, weight: {r$wgt1()}")
+            if(input$custom_ytitle == "None"){
+              print(tt)
+              ytitle <- sapply(tt,"[[",2)
+              print(ytitle)
+              if(r$wgt1() != "Raw"){
+                ytitle <- glue::glue("{ytitle}, weight: {r$wgt1()}")
+              }
+              if(r$norm1() != "Raw"){
+                ytitle <- glue::glue("{ytitle}, norm.: {r$norm1()}")
+              }
+
+            }else{
+              ytitle <- input$custom_ytitle
             }
-            if(r$norm1() != "Raw"){
-              ytitle <- glue::glue("{ytitle}, norm.: {r$norm1()}")
+            
+            fun <-  glue::glue('tabfeat0 = tabF_melt2[tabF_melt2$features == FEAT[i],] %>% 
+                    group_by({fact3ok}) %>% 
+                    mutate(outlier=ifelse(is_outlier(value), sample.id, NA))')
+            eval(parse(text=fun))
+
+            fun <- glue::glue("
+                tabfeat <- tabfeat0 %>%
+                  dplyr::filter({r_values$fact3ok} %in% input$sorted1) %>%
+                  droplevels() %>%
+                  mutate({r_values$fact3ok} = factor({r_values$fact3ok}, levels = input$sorted1))
+              ")
+            eval(parse(text=fun))
+
+             if(!input$plotall){
+                tabfeat <- tabfeat %>% filter(!is.na(value))
+              }
+
+            if(nrow(tabfeat) == 0){print("no data"); next}
+            
+            fun <-  glue::glue('listP[[FEAT[i]]] <- ggplot(tabfeat, aes(x = {fact3ok}, y = value, fill = {fact3ok})) + 
+          geom_boxplot(fill = "#99AFE3") + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(FEAT[i]) +
+          theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1))  + 
+          labs(fill="")')
+            eval(parse(text=fun))
+
+            if(input$outlier_labs){
+              listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
+                                ggrepel::geom_text_repel(aes(label = outlier), na.rm = TRUE, show.legend = F, 
+                                direction = "both",
+                                nudge_x = 0.1,
+                                size= 3
+                               )
             }
 
-          }else{
-            ytitle <- input$custom_ytitle
-          }
-          
-          fun <-  glue::glue('tabfeat0 = tabF_melt2[tabF_melt2$features == FEAT[i],] %>% 
-                  group_by({fact3ok}) %>% 
-                  mutate(outlier=ifelse(is_outlier(value), sample.id, NA))')
-          eval(parse(text=fun))
-
-          fun <- glue::glue("
-              tabfeat <- tabfeat0 %>%
-                dplyr::filter({r_values$fact3ok} %in% input$sorted1) %>%
-                droplevels() %>%
-                mutate({r_values$fact3ok} = factor({r_values$fact3ok}, levels = input$sorted1))
-            ")
-          eval(parse(text=fun))
-
-           if(!input$plotall){
-              tabfeat <- tabfeat %>% filter(!is.na(value))
+            if(!input$grey_mode){
+              listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
+                                geom_boxplot(fill = "grey")
+            }else{
+              listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
+                                geom_boxplot()            
             }
 
-          if(nrow(tabfeat) == 0){print("no data"); next}
-          
-          fun <-  glue::glue('listP[[FEAT[i]]] <- ggplot(tabfeat, aes(x = {fact3ok}, y = value, fill = {fact3ok})) + 
-        geom_boxplot(fill = "#99AFE3") + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(FEAT[i]) +
-        theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1))  + 
-        labs(fill="")')
-          eval(parse(text=fun))
+            if(input$pngs_out){
+              if(!dir.exists(input$outpath)){
+                dir.create(input$outpath, recursive = TRUE)
+              }
+              ggsave(glue::glue("{input$outpath}/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]])
+            }
 
-          if(input$outlier_labs){
-            listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
-                              ggrepel::geom_text_repel(aes(label = outlier), na.rm = TRUE, show.legend = F, 
-                              direction = "both",
-                              nudge_x = 0.1,
-                              size= 3
-                             )
+            print(length(listP))
           }
 
-          if(!input$grey_mode){
-            listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
-                              geom_boxplot(fill = "grey")
-          }else{
-            listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
-                              geom_boxplot()            
-          }
-
-          print(length(listP))
-        }
+        }, value = 0 ,message = "Processing boxplots ... please wait.")
       # browser()
       print(length(listP))
       
