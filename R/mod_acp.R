@@ -28,12 +28,12 @@ mod_acp_ui <- function(id){
              verbatimTextOutput(ns("naomitval"))
          ),
          box(title = "Plot Settings:", width = 6, status = "warning", solidHeader = TRUE,
-             # uiOutput(ns("factor1")),
-             selectInput(
-               ns("fact1"),
-               label = "Factor to color samples in PCA:",
-               choices = ""
-             ),
+             pickerInput(
+              ns("fact3"),
+              label = "Factor to plot with in boxplot:",
+              choices = "",
+              multiple = TRUE
+            ),
              fluidRow(
                column(3,
                       selectInput(ns("pc1"),
@@ -100,9 +100,17 @@ mod_acp_server <- function(id, r = r, session = session){
       if(!is.null(metadata1)){
 
         #ACP
-        updateSelectInput(session, "fact1",
-                          choices = names(metadata1),
-                          selected = names(metadata1)[1])
+        r_values$metadata_final <- r$mt1()
+        updatePickerInput(session, "fact3",
+                          choices = names(r_values$metadata_final),
+                          selected = names(r_values$metadata_final)[2],
+                          options = list(
+                            `actions-box` = TRUE, 
+                            size = 10,
+                            `selected-text-format` = "count > 3"
+                          )
+                        )
+
         updateSelectInput(session, "pc1",
                           choices = colnames(acp1()$x)[1:10],
                           selected = colnames(acp1()$x)[1])
@@ -205,14 +213,15 @@ mod_acp_server <- function(id, r = r, session = session){
     
     output$prevacp1 <- DT::renderDataTable({
       cat(file=stderr(), 'ACP table', "\n")
-      acptab()
+      r_values$acptab1
     }, filter="top",options = list(pageLength = 5, scrollX = TRUE, server=TRUE))  # , rowCallback = DT::JS(rowCallback))
     
     output$acpind_download <- downloadHandler(
       filename = "acpind_table.csv",
       content = function(file) {
-        req(acptab())
-        write.table(acptab(), file, sep="\t", row.names=FALSE)
+        req(r_values$acptab1)
+        r_values$acptab1
+        write.table(r_values$acptab1, file, sep="\t", row.names=FALSE)
       }
     )
     
@@ -239,18 +248,31 @@ mod_acp_server <- function(id, r = r, session = session){
     
     # Acp PLOT
     acpplot <- eventReactive(input$go1, {
-      req(input$fact1, acptab(), input$pc1, input$pc2)
+      req(input$fact3, acptab(), input$pc1, input$pc2)
     # acpplot <- reactive({
       cat(file=stderr(), 'ACP plot', "\n")
       showNotification("Processing visualization...", type="message", duration = 2)
-      print(input$fact1)
+      print(input$fact3)
+
+      r_values$acptab1 <- acptab1 <- acptab()
+      fact3ok <- input$fact3
+
+      if(length(input$fact3) != 1){
+          comb = glue::glue_collapse(input$fact3, sep = ', \"_\",')
+          namevar <- glue::glue_collapse(input$fact3, sep = '_')
+          fun = glue::glue('acptab1 <- acptab1 %>% dplyr::mutate({namevar} = paste0({comb}), .after= "sample.id")')
+          eval(parse(text=fun))
+          r_values$fact3ok <- fact3ok <- namevar
+          r_values$acptab1 <- acptab1
+        }
+
       
       pc1 = as.numeric(substring(input$pc1, 3, 10))
       pc2 = as.numeric(substring(input$pc2, 3, 10))
 
-      p = ggplot(data = acptab(), aes_string(x = input$pc1, y =
-                                        input$pc2, color = as.name(input$fact1), sampleID = "sample.id")) + 
-        geom_point() + stat_ellipse(aes_string(x = input$pc1, y = input$pc2, color = as.name(input$fact1)), inherit.aes = FALSE) + theme_bw() + 
+      p = ggplot(data = acptab1, aes_string(x = input$pc1, y =
+                                        input$pc2, color = as.name(fact3ok), sampleID = "sample.id")) + 
+        geom_point() + stat_ellipse(aes_string(x = input$pc1, y = input$pc2, color = as.name(fact3ok)), inherit.aes = FALSE) + theme_bw() + 
         xlab(glue::glue("{input$pc1} ({round(r_values$summary_acp$importance[2,pc1]*100,1)}%)")) + ylab(glue::glue("{input$pc2} ({round(r_values$summary_acp$importance[2,pc2]*100,1)}%)"))
       
       ggplotly(p, tooltip=c("x", "y", "sampleID"))

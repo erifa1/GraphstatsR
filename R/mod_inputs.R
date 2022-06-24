@@ -343,6 +343,7 @@ mod_inputs_server <- function(id, r = r, session = session){
         # print(samplenames_out)
 
         mt1 <- metadata1 %>% filter(!row_number() %in% outliers1)
+        names(mt1) <- gsub(" ","_",names(mt1))
         # print(mt1$sample.id)
         ds0 <- feat1 %>% select(-samplenames_out)
         # print(colnames(ds0))
