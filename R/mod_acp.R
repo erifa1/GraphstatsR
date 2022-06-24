@@ -30,7 +30,7 @@ mod_acp_ui <- function(id){
          box(title = "Plot Settings:", width = 6, status = "warning", solidHeader = TRUE,
              pickerInput(
               ns("fact3"),
-              label = "Factor to plot with in boxplot:",
+              label = "Factor to color samples in PCA:",
               choices = "",
               multiple = TRUE
             ),
