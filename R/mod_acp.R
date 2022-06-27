@@ -44,6 +44,7 @@ mod_acp_ui <- function(id){
                                   label = "Component on Y axis:",
                                   choices = ""))
              ),
+             materialSwitch(ns("ellipse1"), label = "Plot ellipses", value = TRUE, status = "primary"),
              actionButton(ns("go1"), "Plot ACP", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
          )
        ),
@@ -272,9 +273,13 @@ mod_acp_server <- function(id, r = r, session = session){
 
       p = ggplot(data = acptab1, aes_string(x = input$pc1, y =
                                         input$pc2, color = as.name(fact3ok), sampleID = "sample.id")) + 
-        geom_point() + stat_ellipse(aes_string(x = input$pc1, y = input$pc2, color = as.name(fact3ok)), inherit.aes = FALSE) + theme_bw() + 
+        geom_point() + theme_bw() + 
         xlab(glue::glue("{input$pc1} ({round(r_values$summary_acp$importance[2,pc1]*100,1)}%)")) + ylab(glue::glue("{input$pc2} ({round(r_values$summary_acp$importance[2,pc2]*100,1)}%)"))
       
+      if(input$ellipse1){
+        p <- p + stat_ellipse(aes_string(x = input$pc1, y = input$pc2, color = as.name(fact3ok)), inherit.aes = FALSE) 
+      }
+
       ggplotly(p, tooltip=c("x", "y", "sampleID"))
     })
       
