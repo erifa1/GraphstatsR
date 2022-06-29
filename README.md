@@ -49,3 +49,14 @@ remotes::install_gitlab(repo = "etienne.rifa/graphstats", host = "forgemia.inra.
 library(graphstatsr)
 graphstatsr::run_app()
 ```
+
+## Toy dataset
+
+Features table and metadata files are available in the `dataset` folder to test Graphstats. (`inst/dataset` in the git repo)
+
+```r
+dir( system.file("dataset/", package = "graphstatsr") )
+# [1] "features_quanti_data.csv" "metadata_file.csv"
+
+```
+

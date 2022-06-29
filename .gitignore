@@ -5,3 +5,5 @@
 README.Rmd
 
 data_test/
+.dockerignore
+Dockerfile
