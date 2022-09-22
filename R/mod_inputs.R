@@ -142,7 +142,8 @@ mod_inputs_server <- function(id, r = r, session = session){
       import_modal(
         id = ns("myid"),
         from = c("file"), #, "env", "copypaste", "googlesheets", "url"
-        title = "Import data to be used in application"
+        title = "Import data to be used in application",
+        file_extensions = c(".csv", ".txt", ".tsv", ".xls", ".xlsx")
       )
     })
 
