@@ -37,11 +37,7 @@ mod_inputs_ui <- function(id){
               column(
                 width = 12,
                 actionButton(ns("launch_modal"), "Features table input module", 
-                  icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469") #,
-                # tags$b("Imported data:"),
-                # verbatimTextOutput(outputId = ns("myid"))
-                # verbatimTextOutput(outputId = ns("name"))
-                # verbatimTextOutput(outputId = ns("data"))
+                  icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
               )
             ),
               tags$h3("Use filters to subset on features:"),
@@ -57,15 +53,7 @@ mod_inputs_ui <- function(id){
                       id = ns("pbar"), value = 100,
                       total = 100, display_pct = TRUE
                     ),
-                    DT::dataTableOutput(outputId = ns("table")),
-                    # tags$b("Code dplyr:"),
-                    # verbatimTextOutput(outputId = ns("code_dplyr")),
-                    # tags$b("Expression:"),
-                    # verbatimTextOutput(outputId = ns("code")),
-                    # tags$b("Filtered data:"),
-                    # verbatimTextOutput(outputId = ns("res_str"))
-                    tags$b("Outliers:"),
-                    verbatimTextOutput(outputId = ns("outliers"))
+                    DT::dataTableOutput(outputId = ns("table"))
                   )
                 )
               ),
@@ -91,6 +79,12 @@ mod_inputs_ui <- function(id){
             box(title = "Normalization", status = "warning", solidHeader = TRUE, width = 3,
                 # verbatimTextOutput(ns('x4bis')),
                 selectInput(
+                  ns("mergefact"),
+                  label = "Sum features belonging the same group:",
+                  choices = ""
+                ),
+
+                selectInput(
                   ns("norm1fact1"),
                   label = "Numeric factor/covariable to weight features values with:",
                   choices = ""
@@ -102,7 +96,7 @@ mod_inputs_ui <- function(id){
                   choices = list(
                     "Raw" = 0 ,
                     "TSS (total-sum normalization)" = 1,
-                    "CLR (center log-ration)" = 2
+                    "CLR (center log-ratio)" = 2
                   ), selected = 0
                 ),
                 actionButton(ns("mergebutton"), "Merge features and metadata...", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
@@ -318,13 +312,22 @@ mod_inputs_server <- function(id, r = r, session = session){
       observe({
         req(res_filter2$filtered()) #metadata
         metadata1 <- res_filter2$filtered()
+        ds1 <- res_filter$filtered()
         #Norm1
         class1 <- sapply(metadata1, class)
         r_values$norm1fact = names(metadata1)[class1 %in% "integer" | class1 %in% "numeric"]
+        r_values$mergefact = ds1 %>% select(where(is.character)) %>% names()
+
+        updateSelectInput(session, "mergefact",
+                          choices = c("Raw", r_values$mergefact),
+                          selected = c("Raw", r_values$mergefact)[1])
+
+
         updateSelectInput(session, "norm1fact1",
                           choices = c("Raw", r_values$norm1fact),
                           selected = c("Raw", r_values$norm1fact)[1]) #names(r_values$metadata_final)[1]
       })
+
 
 
       r$mergetable <- mergetable <- eventReactive(input$mergebutton, {
@@ -348,76 +351,91 @@ mod_inputs_server <- function(id, r = r, session = session){
         # print(mt1$sample.id)
         ds0 <- feat1 %>% select(-samplenames_out)
         # print(colnames(ds0))
+        # browser()
 
+        if(input$mergefact != "Raw"){
+          if(length(unique(feat1$type)) > 1 |  length(unique(feat1$unit)) > 1){
+              print("Non unique type of data")
+              shinyalert(title = "Oops", text=glue::glue("Merge by {input$mergefact}? \n You need to filter features table with only one type of data e.g. {sample(feat1$type, 1)}."), type='error')
+              return(data.frame())
+          }
 
-
-        row.names(ds0) <- glue::glue("{ds0[,1]}__{ds0[,2]}__{ds0[,3]}")
-
-
-        cat(file=stderr(), 'PONDERATION', "\n")
-        
-        class1 <- sapply(ds0, class)
-        ds1 <- ds0[,class1 == "numeric" | class1 == "integer"]
-        # print(colnames(ds1))
-        r_values$wgt1 <- input$norm1fact1
-        # print(prev(ds1))
-        
-        if(input$norm1fact1 == "Raw"){
-          pondds1 <- ds1
-        }else{
-          fp1 = metadata1[colnames(ds1),input$norm1fact1]  # force same order between table
-          fp1[fp1 == 0] <- NA
-          pondds1 <- t(apply(ds1, 1, function(x){x/fp1}))
+          print("GLOM OK")
+          fun = glue::glue("ds0 <- ds0 %>% group_by({input$mergefact}) %>% 
+            summarise(across(where(is.numeric), sum)) %>%
+            mutate(type = unique(ds0$type), unit = unique(ds0$unit), .after = 1) %>% 
+            rename(features = 1) %>%
+            as.data.frame()
+            ")
+          eval(parse(text=fun))
         }
-        
-        # print(prev(pondds1))
-        # r_values$pondds1 <- pondds1
-        
-        
-        cat(file=stderr(), 'NORMALIZATION', "\n")
-        ds1 <- pondds1
-        # print(head(ds1))
-        norm_names = c("Raw", "TSS", "CLR")
-        r_values$norm1 <- norm_names[as.numeric(input$norm_method)+1]
-        print(r_values$norm1)
 
-        if(input$norm_method == 0){
-          normds1 <- ds1
-        }
-        
-        if(input$norm_method == 1){
-          normf = function(x){ x/sum(x, na.rm = TRUE) }
-          # normds1 <- transform_sample_counts(ds1, normf)
-          normds1 <- apply(ds1, 2, normf)
-        }
-        
-        if(input$norm_method == 2){
-          clr = function(x){log(x+1) - rowMeans(log(x+1), na.rm = TRUE)}
-          normds1 <- clr(ds1)
-        }
-        # save(list = ls(all.names = TRUE), file = "debug.rdata", envir = environment()); print("SAVE0")
 
-        print("Final data")
+          row.names(ds0) <- glue::glue("{ds0[,1]}__{ds0[,2]}__{ds0[,3]}")
 
-        # Finale dataset
-        Fdataset <- as.data.frame(t(normds1)) %>% 
-        tibble::rownames_to_column(var = "sample.id") %>% 
-        dplyr::right_join(x = mt1, by = "sample.id")  # %>% mutate_if(is.character,as.factor)
-        row.names(Fdataset) <- Fdataset$sample.id
-        r_values$subsetds_final <- Fdataset
+          cat(file=stderr(), 'PONDERATION', "\n")
+          
+          class1 <- sapply(ds0, class)
+          ds1 <- ds0[,class1 == "numeric" | class1 == "integer"]
+          # print(colnames(ds1))
+          r_values$wgt1 <- input$norm1fact1
+          # print(prev(ds1))
+          
+          if(input$norm1fact1 == "Raw"){
+            pondds1 <- ds1
+          }else{
+            fp1 = metadata1[colnames(ds1),input$norm1fact1]  # force same order between table
+            fp1[fp1 == 0] <- NA
+            pondds1 <- t(apply(ds1, 1, function(x){x/fp1}))
+          }
+          
+          # print(prev(pondds1))
+          # r_values$pondds1 <- pondds1
+          
+          
+          cat(file=stderr(), 'NORMALIZATION', "\n")
+          ds1 <- pondds1
+          # print(head(ds1))
+          norm_names = c("Raw", "TSS", "CLR")
+          r_values$norm1 <- norm_names[as.numeric(input$norm_method)+1]
+          print(r_values$norm1)
 
-        # melt final dataset for boxplot
-        r_values$subsetds_final_melt <- reshape2::melt(Fdataset, id.vars = 1:ncol(mt1), measure.vars = (ncol(mt1)+1):ncol(Fdataset), variable.name = "features")
-        
+          if(input$norm_method == 0){
+            normds1 <- ds1
+          }
+          
+          if(input$norm_method == 1){
+            normf = function(x){ x/sum(x, na.rm = TRUE) }
+            # normds1 <- transform_sample_counts(ds1, normf)
+            normds1 <- apply(ds1, 2, normf)
+          }
+          
+          if(input$norm_method == 2){
+            clr = function(x){log(x+1) - rowMeans(log(x+1), na.rm = TRUE)}
+            normds1 <- clr(ds1)
+          }
 
-        #for PCA
-        r_values$metadata_final <- droplevels(Fdataset[,1:ncol(mt1)])
-        # print(prev(r_values$metadata_final))
-        r_values$features_final <- Fdataset[,(ncol(mt1)+1):ncol(Fdataset)]
-        # print(prev(r_values$features_final))
+          print("Final data")
 
-        showNotification("Dataset ready !", type="message", duration = 5)
-        Fdataset
+          # Final dataset
+          Fdataset <- as.data.frame(t(normds1)) %>% 
+          tibble::rownames_to_column(var = "sample.id") %>% 
+          dplyr::right_join(x = mt1, by = "sample.id")  # %>% mutate_if(is.character,as.factor)
+          row.names(Fdataset) <- Fdataset$sample.id
+          r_values$subsetds_final <- Fdataset
+
+          # melt final dataset for boxplot
+          r_values$subsetds_final_melt <- reshape2::melt(Fdataset, id.vars = 1:ncol(mt1), measure.vars = (ncol(mt1)+1):ncol(Fdataset), variable.name = "features")
+          
+
+          #for PCA
+          r_values$metadata_final <- droplevels(Fdataset[,1:ncol(mt1)])
+          # print(prev(r_values$metadata_final))
+          r_values$features_final <- Fdataset[,(ncol(mt1)+1):ncol(Fdataset)]
+          # print(prev(r_values$features_final))
+
+          showNotification("Dataset ready !", type="message", duration = 5)
+          Fdataset
 
       })
 
