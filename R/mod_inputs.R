@@ -337,6 +337,13 @@ mod_inputs_server <- function(id, r = r, session = session){
         }
 
         metadata1 <- res_filter2$filtered()
+
+        if(length(unique(metadata1$sample.id)) != length(metadata1$sample.id)){
+            print("non unique sample id")
+            shinyalert(title = "Oops", text=glue::glue("Each sample ID needs to be unique."), type='error')
+            return(data.frame())
+        }
+
         row.names(metadata1) <- metadata1[,"sample.id"]
         feat1 <- res_filter$filtered()
 
