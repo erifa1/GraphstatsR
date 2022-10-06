@@ -1,6 +1,6 @@
 Package: graphstatsr
 Title: graphstatsr
-Version: 1.5.0
+Version: 1.6.0
 Authors@R: 
     person("Etienne", "Rifa", , "etienne.rifa@insa-toulouse.fr", role = c("cre", "aut"))
 Description: A shiny app to easily generate advanced graphics and some non
@@ -14,11 +14,13 @@ Imports:
     factoextra,
     ggplot2,
     ggrepel,
+    ggstatsplot,
     glue,
     golem (>= 0.3.1),
     gridExtra,
     htmltools,
     plotly,
+    PMCMRplus,
     reshape2,
     rhdf5,
     shiny (>= 1.6.0),

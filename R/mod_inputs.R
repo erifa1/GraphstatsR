@@ -22,6 +22,7 @@
 #' @importFrom reshape2 melt
 #' @importFrom shinyalert shinyalert
 #' @importFrom ggrepel geom_text_repel
+#' @importFrom bit64 is.integer64
 #' @import shinyWidgets
 #' @import ggplot2
 #' @import DT
@@ -59,6 +60,7 @@ mod_inputs_ui <- function(id){
               ),
           box(title = "Input metadata dataset", status = "warning", solidHeader = TRUE, width=12,
               actionButton(ns("launch_modal2"), "Metadata input module", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
+              downloadButton(outputId = ns("metadatTemplate_download"), label = "Download metadata template"),
               tags$h3("Use filters to subset on metadata, and click on rows you need to remove:"),
               column(
                 width = 3,
@@ -129,13 +131,14 @@ mod_inputs_server <- function(id, r = r, session = session){
     # Input dataset dev 
 
     observeEvent(input$launch_modal, {
+      print("inputMODAL1")
       r_values$subsetds_final <- "emptytable" # for shinyalert acp / boxplot
       r_values$subsetds_final_melt <- "emptytable"
       r_values$merged <- NULL
 
       import_modal(
         id = ns("myid"),
-        from = c("file"), #, "env", "copypaste", "googlesheets", "url"
+        from = c("file","copypaste", "googlesheets", "url"), #
         title = "Import data to be used in application",
         file_extensions = c(".csv", ".txt", ".tsv", ".xls", ".xlsx")
       )
@@ -148,35 +151,23 @@ mod_inputs_server <- function(id, r = r, session = session){
       input$myid
     })
 
-    # output$name <- renderPrint({
-    #   req(imported$name())
-    #   imported$name()
-    # })
-
-    # output$data <- renderPrint({
-    #   req(imported$data())
-    #   as.tibble(imported$data())
-    # })
-
 
     # Filters dev
 
-
       data <- reactive({
         r_values$imported <- imported$data()
-        imported$data()      
-        # dev
-        # read.csv("~/repository/graphstatsr/data_test/metabo_all_data_special.csv", sep ="\t")
-      })
+        if(is.null(imported$data())){
+          dat <- imported$data()
+        }else{
+          dat <- imported$data() %>% mutate_if(bit64::is.integer64,as.numeric)
+        }
 
-      # output$datainput <- renderPrint({
-      #   # imported$data()[1:10,1:10]
-      #   data()[1:10,]
-      # })
+        dat
+      })
 
       res_filter <- filter_data_server(
         id = "filtering",
-        data = data,
+        data = data  ,
         name = reactive("feature_table"),
         vars = reactive(NULL),
         widget_num = "slider",
@@ -196,41 +187,53 @@ mod_inputs_server <- function(id, r = r, session = session){
       }, options = list(pageLength = 6, scrollX = TRUE))
 
 
-      output$code_dplyr <- renderPrint({
-        res_filter$code()
-      })
-      output$code <- renderPrint({
-        res_filter$expr()
-      })
+      # output$code_dplyr <- renderPrint({
+      #   res_filter$code()
+      # })
+      # output$code <- renderPrint({
+      #   res_filter$expr()
+      # })
 
-      output$res_str <- renderPrint({
-        str(res_filter$filtered())
-      })
+      # output$res_str <- renderPrint({
+      #   str(res_filter$filtered())
+      # })
+
+    output$metadatTemplate_download <- downloadHandler(
+      filename = "metadata_template.csv",
+      content = function(file) {
+        req(data())
+        A <- data() #r_values$imported
+
+        if(!is.null(A)){
+          print("there is a DATASET")
+          DF <- data.frame(row.names = names(A)[4:ncol(A)])
+          DF$sample.id <- names(A)[4:ncol(A)]
+          DF$factor_example <- glue::glue("group_{rep(LETTERS[1:3], each = 2, length.out=nrow(DF))}")
+          write.csv(DF, file, sep=",", row.names=FALSE)
+        }else{
+          print("no dataset")
+          return(NULL)
+        }
+
+      }
+    )
 
 
     # Input metadata dev 
 
     observeEvent(input$launch_modal2, {
+      print("inputMODAL2")
       r_values$merged <- NULL
 
       import_modal(
         id = ns("myid2"),
-        from = c("file", "env", "copypaste", "googlesheets", "url"),
-        title = "Import data to be used in application"
+        from = c("file", "copypaste", "googlesheets", "url"),
+        title = "Import data to be used in application",
+        file_extensions = c(".csv", ".txt", ".tsv", ".xls", ".xlsx")
       )
     })
 
     imported2 <- import_server("myid2", return_class = "data.frame")
-
-    # output$name <- renderPrint({
-    #   req(imported$name())
-    #   imported$name()
-    # })
-
-    # output$data <- renderPrint({
-    #   req(imported$data())
-    #   as.tibble(imported$data())
-    # })
 
 
     # Filters metadata dev
@@ -239,9 +242,6 @@ mod_inputs_server <- function(id, r = r, session = session){
       data2 <- reactive({
         r_values$imported2 <- imported2$data()
         imported2$data()
-        
-        # dev
-        # read.csv("~/repository/graphstatsr/data_test/metadata_metabo.csv", sep ="\t")
       })
 
       res_filter2 <- filter_data_server(

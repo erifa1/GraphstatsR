@@ -8,6 +8,8 @@
 #'
 #' @importFrom shiny NS tagList 
 #' @importFrom sortable rank_list bucket_list add_rank_list sortable_options
+#' @importFrom ggstatsplot ggbetweenstats
+#' @import PMCMRplus
 
 
 
@@ -47,6 +49,7 @@ mod_boxplots_ui <- function(id){
               choices = c(1:4), selected = 1
             ),
             textInput(ns("custom_ytitle"), "Custom y title", "None"),
+            materialSwitch(ns("ggplotstats1"), label = "Display ggstatsplot", value = TRUE, status = "primary"),
             materialSwitch(ns("plotall"), label = "Plot all conditions (even NAs)", value = TRUE, status = "primary"),
             materialSwitch(ns("grey_mode"), label = "Colored boxplot", value = TRUE, status = "primary"),
             materialSwitch(ns("outlier_labs"), label = "Inform outlier in pdf output", value = TRUE, status = "primary"),
@@ -70,6 +73,12 @@ mod_boxplots_ui <- function(id){
         box(width = 12, 
             title = 'Boxplot:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
             plotlyOutput(ns("boxplotly1"), height = "500")
+        )
+      ),
+      fluidRow(
+        box(width = 12, 
+            title = 'Boxplot with stats:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+            plotOutput(ns("ggplotstatsOUT1"), height = "500")
         )
       ),
       fluidRow(box(width = 12, 
@@ -212,6 +221,8 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
 
     boxplot1 <- eventReactive(c(input$go4, input$go3), {  #
+      outlist = list()
+      
       cat(file=stderr(), 'BOXPLOT', "\n")
       tabfeat0 <- boxtab()
 
@@ -227,7 +238,6 @@ mod_boxplots_server <- function(id, r = r, session = session){
       }else{
         ytitle <- input$custom_ytitle
       }
-
       fun <- glue::glue("
           tabfeat <- tabfeat0 %>%
             dplyr::filter({r_values$fact3ok} %in% input$sorted1) %>%
@@ -248,26 +258,38 @@ mod_boxplots_server <- function(id, r = r, session = session){
       if(!input$grey_mode){
         p <- p + 
             geom_boxplot(fill = "grey")
+
+        r_values$ggly <- ggly <- ggplotly(p)
+        # # Hoverinfo works only in grey mode 
+        tabfeat$sample.id <- as.character(tabfeat$sample.id)
+        hoverinfo <- with(tabfeat, paste0("sample: ", sample.id, "</br></br>", 
+                                        "value: ", value))
+        ggly$x$data[[1]]$text <- hoverinfo
+        ggly$x$data[[1]]$hoverinfo <- c("text", "boxes")
+        ######
       }else{
         p <- p + 
             geom_boxplot()            
+      r_values$ggly <- ggly <- ggplotly(p)
+      }
+
+      if(input$ggplotstats1){
+        fun <-  glue::glue('
+          ggstats <- ggbetweenstats(tabfeat, {r_values$fact3ok}, value, type = "nonparametric", 
+              p.adjust.method = "fdr", pairwise.display = "significant", xlab = "", ylab = ytitle,
+              outlier.tagging = TRUE, outlier.label = "sample.id")
+              ')
+        eval(parse(text=fun))
+        r_values$ggstats <- ggstats
+        outlist$ggstats <- ggstats
       }
 
 
-
-      r_values$ggly <- ggly <- ggplotly(p)
-      
-      # # Hoverinfo BUG
-      # tabfeat$sample.id <- as.character(tabfeat$sample.id)
-      # hoverinfo <- with(tabfeat, paste0("sample: ", sample.id, "</br></br>", 
-      #                                 "value: ", value))
-      # ggly$x$data[[1]]$text <- hoverinfo
-      # ggly$x$data[[1]]$hoverinfo <- c("text", "boxes")
       
       
       cat(file=stderr(), 'BOXPLOT done', "\n")
       
-      outlist = list()
+
       outlist$p <- p
       outlist$tabF_melt2 <- r_values$tabF_melt2
       outlist$fact3ok <- r_values$fact3ok 
@@ -286,6 +308,15 @@ mod_boxplots_server <- function(id, r = r, session = session){
         ggplotly(bp1$ggly)
       }
     })
+
+    output$ggplotstatsOUT1 <- renderPlot({
+      # req(boxplot1())
+      req(input$go3)
+      if(!is.null(r_values$ggstats)){
+        bp1 <- boxplot1()
+        bp1$ggstats
+      }
+    }, res = 100)
     
     # Export all figures
     
@@ -452,7 +483,6 @@ mod_boxplots_server <- function(id, r = r, session = session){
     wilcoxBP <- eventReactive(input$go3, {
       cat(file=stderr(), 'wilcoxBP table', "\n")
       req(boxplot1())
-      
       Amelt <- boxplot1()$tabF_melt2
       
       pval_table <- data.frame()
