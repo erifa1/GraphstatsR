@@ -43,18 +43,36 @@ mod_boxplots_ui <- function(id){
               label = "Feature to plot in boxplot:",
               choices = ""
             ),
-            selectInput(
-              ns("nbPicPage"),
-              label = "Select number of plot per pdf page (max 4 per page):",
-              choices = c(1:4), selected = 1
-            ),
-            textInput(ns("custom_ytitle"), "Custom y title", "None"),
-            materialSwitch(ns("ggplotstats1"), label = "Display ggstatsplot", value = TRUE, status = "primary"),
-            materialSwitch(ns("plotall"), label = "Plot all conditions (even NAs)", value = TRUE, status = "primary"),
-            materialSwitch(ns("grey_mode"), label = "Colored boxplot", value = TRUE, status = "primary"),
-            materialSwitch(ns("outlier_labs"), label = "Inform outlier in pdf output", value = TRUE, status = "primary"),
-            materialSwitch(ns("pngs_out"), label = "Output png for each feature (long process)", value = FALSE, status = "primary"),
-            textInput(ns("outpath"), "Output path for pngs", ""),
+
+            dropMenu(
+              actionButton("go0", "More parameters..."),
+              {fluidRow(
+                
+                column(
+                  h3("General settings"),
+                  textInput(ns("custom_ytitle"), "Custom y title", "None"),
+                  materialSwitch(ns("ggplotstats1"), label = "Display ggstatsplot", value = TRUE, status = "primary"),
+                  materialSwitch(ns("plotall"), label = "Plot all conditions (even NAs)", value = TRUE, status = "primary"),
+                  materialSwitch(ns("grey_mode"), label = "Colored boxplot", value = TRUE, status = "primary"),
+                  width = 6
+                  ),
+                column(
+                  h3("PDF and PNGs output settings"),
+                  selectInput( ns("nbPicPage"), label = "Select number of plot per pdf page (max 4 per page):", choices = c(1:4), selected = 1),
+                  materialSwitch(ns("verticaldisplay"), label = "Vertical display in pdf or not (2 per page)", value = TRUE, status = "primary"),
+                  sliderInput(ns("sizexlab"), label = "X labels size", min = 0, max = 1, value = 0.8, step = 0.05),
+                  materialSwitch(ns("outlier_labs"), label = "Inform outlier in pdf output", value = TRUE, status = "primary"),
+                  materialSwitch(ns("pngs_out"), label = "Output png for each feature (long process)", value = FALSE, status = "primary"),
+                  textInput(ns("outpath"), "Output path for pngs", ""),
+                  width = 6
+                  )
+
+                )
+
+              },
+                  theme = "light-border",
+                  placement = "right"
+              ),
             actionButton(ns("go3"), "Run plot/stats & tests", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
             actionButton(ns("go4"), "Update plot only", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
             downloadButton(outputId = ns("boxplots_download"), label = "Download pdf and pngs (long process)")
@@ -319,6 +337,8 @@ mod_boxplots_server <- function(id, r = r, session = session){
     }, res = 100)
     
     # Export all figures
+
+
     
     pdfall <- reactive({
       cat(file=stderr(), 'ALL BOXPLOT', "\n")
@@ -372,7 +392,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
             
             fun <-  glue::glue('listP[[FEAT[i]]] <- ggplot(tabfeat, aes(x = {fact3ok}, y = value, fill = {fact3ok})) + 
           geom_boxplot(fill = "#99AFE3") + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(FEAT[i]) +
-          theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1))  + 
+          theme(legend.position = "None", axis.text.x = element_text(size=rel(input$sizexlab), angle = 45, hjust=1))  + 
           labs(fill="")')
             eval(parse(text=fun))
 
@@ -419,12 +439,20 @@ mod_boxplots_server <- function(id, r = r, session = session){
         print('pdf output')
         
         withProgress({
-          if(as.numeric(input$nbPicPage) < 4){
-            ml <- marrangeGrob(p, nrow= 1, ncol=as.numeric(input$nbPicPage))
-          }else{
-            ml <- marrangeGrob(p, nrow=2, ncol=2)
-          }
-          
+          ml <- marrangeGrob(p, nrow=1, ncol=1)
+
+            if(as.numeric(input$nbPicPage) == 4){
+              ml <- marrangeGrob(p, nrow=2, ncol=2)
+             }else if(as.numeric(input$nbPicPage) == 3){
+              ml <- marrangeGrob(p, nrow= 1, ncol=as.numeric(input$nbPicPage))
+              }else if(as.numeric(input$nbPicPage) == 2){
+                if(input$verticaldisplay){
+                  ml <- marrangeGrob(p, nrow= as.numeric(input$nbPicPage), ncol= 1)
+                }else{
+                  ml <- marrangeGrob(p, nrow= 1, ncol=as.numeric(input$nbPicPage))
+                }
+              }
+
           ggsave(file, ml, units = "cm", width = 20, height = 15, dpi = 300)
         }, message = "Prepare pdf file... please wait.")
 

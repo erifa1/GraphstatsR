@@ -6,6 +6,9 @@
 #' @import shinydashboard
 #' @importFrom shinyalert useShinyalert
 #' @noRd
+
+SK8img <- base64enc::dataURI(file=system.file(file.path('app/www', 'SK8.png'), package='graphstatsr'))
+
 app_ui <- function(request) {
   tagList(
     # Leave this function for adding external resources
@@ -16,7 +19,11 @@ app_ui <- function(request) {
     # )
     dashboardPage(skin = "red",
                   dashboardHeader(
-                    title = "GraphStatsR 1.6.0",
+                    title = "GraphStatsR 1.6.1",
+
+                    tags$li(class="dropdown",tags$a("Hosted by", img(src = SK8img,
+                    title = "SK8", height = "20px"), headerText = "Source code",href="https://sk8.inrae.fr/", target="_blank")),
+
                     tags$li(class="dropdown",tags$a(icon("gitlab"), headerText = "Source code",href="https://forgemia.inra.fr/etienne.rifa/graphstats", target="_blank")),
                     tags$li(class="dropdown",tags$a(icon("clinic-medical"), headerText = "Issues",href="https://forgemia.inra.fr/etienne.rifa/graphstats/-/issues", target="_blank"))#,
                     # tags$li(class="dropdown",tags$a(icon("twitter"), headerText = "Share", href="
