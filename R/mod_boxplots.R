@@ -11,6 +11,7 @@
 #' @importFrom ggstatsplot ggbetweenstats
 #' @import PMCMRplus
 
+tmpdir <- tempdir()
 
 
 labels <- list(
@@ -64,7 +65,7 @@ mod_boxplots_ui <- function(id){
                   sliderInput(ns("sizexlab"), label = "X labels size", min = 0, max = 1, value = 0.8, step = 0.05),
                   materialSwitch(ns("outlier_labs"), label = "Inform outlier in pdf output", value = TRUE, status = "primary"),
                   materialSwitch(ns("pngs_out"), label = "Output png for each feature (long process)", value = FALSE, status = "primary"),
-                  textInput(ns("outpath"), "Output path for pngs", ""),
+                  # textInput(ns("outpath"), "Output path for pngs", ""),
                   width = 6
                   )
 
@@ -76,7 +77,8 @@ mod_boxplots_ui <- function(id){
               ),
             actionButton(ns("go3"), "Run plot/stats & tests", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
             actionButton(ns("go4"), "Update plot only", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
-            downloadButton(outputId = ns("boxplots_download"), label = "Download pdf and pngs (long process)")
+            downloadButton(outputId = ns("boxplots_download"), label = "Generate pdf and pngs (long process)"),
+            downloadButton(outputId = ns("downloadTAR"), label = "Download pngs")
         ),
         box(title = "Reorder boxplots:", width = 5, status = "warning", solidHeader = TRUE, collapsible = TRUE,
             uiOutput(ns("sortable"))#,
@@ -156,13 +158,13 @@ mod_boxplots_server <- function(id, r = r, session = session){
                             `selected-text-format` = "count > 3"
                           )
         )
-        updateTextInput(
-          session = session,
-          "outpath",
-          label = "Output path for pngs",
-          value = getwd(),
-          placeholder = NULL
-        )
+        # updateTextInput(
+        #   session = session,
+        #   "outpath",
+        #   label = "Output path for pngs",
+        #   value = getwd(),
+        #   placeholder = NULL
+        # )
 
       }
     })
@@ -416,10 +418,14 @@ mod_boxplots_server <- function(id, r = r, session = session){
             }
 
             if(input$pngs_out){
-              if(!dir.exists(input$outpath)){
-                dir.create(input$outpath, recursive = TRUE)
-              }
-              ggsave(glue::glue("{input$outpath}/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]])
+            #   if(!dir.exists(input$outpath)){
+            #     dir.create(input$outpath, recursive = TRUE)
+            #   }
+              print("WRITE PLOTS")
+              dir.create(paste(tmpdir, "/figures/", sep = ""), recursive = TRUE)
+              print(paste(tmpdir, "/figures/", sep = ""))
+              ggsave(glue::glue("{tmpdir}/figures/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
+              tar(glue::glue("{tmpdir}/figures.tar"), files = glue::glue("{tmpdir}/figures") )
             }
 
             print(length(listP))
@@ -491,10 +497,15 @@ mod_boxplots_server <- function(id, r = r, session = session){
             eval(parse(text=fun))
 
             if(input$pngs_out){
-              if(!dir.exists(input$outpath)){
-                dir.create(input$outpath, recursive = TRUE)
-              }
-              ggsave(glue::glue("{input$outpath}/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
+            #   if(!dir.exists(input$outpath)){
+            #     dir.create(input$outpath, recursive = TRUE)
+            #   }
+
+              print("WRITE PLOTS")
+              dir.create(paste(tmpdir, "/figures/", sep = ""), recursive = TRUE)
+              print(paste(tmpdir, "/figures/", sep = ""))
+              ggsave(glue::glue("{tmpdir}/figures/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
+              tar(glue::glue("{tmpdir}/figures.tar"), files = glue::glue("{tmpdir}/figures") )
             }
 
             print(length(listP))
@@ -505,6 +516,15 @@ mod_boxplots_server <- function(id, r = r, session = session){
       
       listP
     })
+
+    output$downloadTAR <- downloadHandler(
+        filename <- glue::glue("{tmpdir}/figures.tar"),
+
+        content <- function(file) {
+          file.copy(filename, file)
+        },
+        contentType = "application/tar"
+      )
 
 
     output$boxplots_download <- downloadHandler(
