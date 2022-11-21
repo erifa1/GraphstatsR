@@ -377,6 +377,13 @@ mod_inputs_server <- function(id, r = r, session = session){
           eval(parse(text=fun))
         }
 
+          # browser()
+
+          if(max(table(glue::glue("{ds0[,1]}__{ds0[,2]}__{ds0[,3]}"))) != 1){
+            print("non unique features id")
+            shinyalert(title = "Oops", text=glue::glue("Each features ID needs to be unique. \n For example, this one is not unique: {names(which(table(glue::glue('{ds0[,1]}__{ds0[,2]}__{ds0[,3]}')) > 1))[1]} "), type='error')
+            return(data.frame())
+          }
 
           row.names(ds0) <- glue::glue("{ds0[,1]}__{ds0[,2]}__{ds0[,3]}")
 

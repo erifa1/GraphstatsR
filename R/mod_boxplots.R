@@ -59,6 +59,7 @@ mod_boxplots_ui <- function(id){
                 column(
                   h3("PDF and PNGs output settings"),
                   selectInput( ns("nbPicPage"), label = "Select number of plot per pdf page (max 4 per page):", choices = c(1:4), selected = 1),
+                  materialSwitch(ns("ggstatOUT"), label = "PDF with ggstat plots", value = FALSE, status = "primary"),
                   materialSwitch(ns("verticaldisplay"), label = "Vertical display in pdf or not (2 per page)", value = TRUE, status = "primary"),
                   sliderInput(ns("sizexlab"), label = "X labels size", min = 0, max = 1, value = 0.8, step = 0.05),
                   materialSwitch(ns("outlier_labs"), label = "Inform outlier in pdf output", value = TRUE, status = "primary"),
@@ -240,7 +241,8 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
     boxplot1 <- eventReactive(c(input$go4, input$go3), {  #
       outlist = list()
-      
+      showNotification("Processing ...", type="message", duration = 5)
+
       cat(file=stderr(), 'BOXPLOT', "\n")
       tabfeat0 <- boxtab()
 
@@ -295,7 +297,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
         fun <-  glue::glue('
           ggstats <- ggbetweenstats(tabfeat, {r_values$fact3ok}, value, type = "nonparametric", 
               p.adjust.method = "fdr", pairwise.display = "significant", xlab = "", ylab = ytitle,
-              outlier.tagging = TRUE, outlier.label = "sample.id")
+              outlier.tagging = TRUE, outlier.label = "sample.id", results.subtitle = FALSE, title = input$feat1)
               ')
         eval(parse(text=fun))
         r_values$ggstats <- ggstats
@@ -424,37 +426,125 @@ mod_boxplots_server <- function(id, r = r, session = session){
           }
 
         }, value = 0 ,message = "Processing boxplots ... please wait.")
-      # browser()
       print(length(listP))
       
       listP
     })
     
+
+    pdfall_ggstat <- reactive({
+      cat(file=stderr(), 'ALL BOXPLOT', "\n")
+      req(r_values$tabF_melt2, r_values$fact3ok)
+
+        fact3ok <- r_values$fact3ok
+        tabF_melt2 <- r_values$tabF_melt2
+        tabF_melt2$sample.id <- as.character(tabF_melt2$sample.id)
+        listP <- list()
+        FEAT = levels(tabF_melt2$features)
+        print(head(FEAT))
+
+        withProgress({
+
+          for(i in 1:length(FEAT)){ #i = 1
+            incProgress(1/length(FEAT))
+            tt <- stringr::str_split(FEAT[i], "__")
+            if(input$custom_ytitle == "None"){
+              print(tt)
+              ytitle <- sapply(tt,"[[",2)
+              print(ytitle)
+              if(r$wgt1() != "Raw"){
+                ytitle <- glue::glue("{ytitle}, weight: {r$wgt1()}")
+              }
+              if(r$norm1() != "Raw"){
+                ytitle <- glue::glue("{ytitle}, norm.: {r$norm1()}")
+              }
+
+            }else{
+              ytitle <- input$custom_ytitle
+            }
+            
+            fun <-  glue::glue('tabfeat0 = tabF_melt2[tabF_melt2$features == FEAT[i],] %>% 
+                    group_by({fact3ok}) %>% 
+                    mutate(outlier=ifelse(is_outlier(value), sample.id, NA))')
+            eval(parse(text=fun))
+
+            fun <- glue::glue("
+                tabfeat <- tabfeat0 %>%
+                  dplyr::filter({r_values$fact3ok} %in% input$sorted1) %>%
+                  droplevels() %>%
+                  mutate({r_values$fact3ok} = factor({r_values$fact3ok}, levels = input$sorted1))
+              ")
+            eval(parse(text=fun))
+
+             if(!input$plotall){
+                tabfeat <- tabfeat %>% filter(!is.na(value))
+              }
+
+            if(nrow(tabfeat) == 0){print("no data"); next}
+            
+              fun <-  glue::glue('
+          listP[[FEAT[i]]] <- ggbetweenstats(tabfeat, {r_values$fact3ok}, value, type = "nonparametric", 
+              p.adjust.method = "fdr", pairwise.display = "significant", xlab = "", ylab = ytitle,
+              outlier.tagging = TRUE, outlier.label = "sample.id", title = FEAT[i], results.subtitle = FALSE)')
+
+
+            eval(parse(text=fun))
+
+            if(input$pngs_out){
+              if(!dir.exists(input$outpath)){
+                dir.create(input$outpath, recursive = TRUE)
+              }
+              ggsave(glue::glue("{input$outpath}/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
+            }
+
+            print(length(listP))
+          }
+
+        }, value = 0 ,message = "Processing boxplots ... please wait.")
+      print(length(listP))
+      
+      listP
+    })
+
+
     output$boxplots_download <- downloadHandler(
       filename = "figures.pdf",
       content = function(file) {
         print('DOWNLOAD ALL')
-        req(pdfall())
-        p <- pdfall()
+        if(input$ggstatOUT){
+          print("ggstat")
+          req(pdfall_ggstat())
+          p <- pdfall_ggstat()
+          
+          withProgress({
+            ml <- marrangeGrob(p, nrow=1, ncol=1)
+            ggsave(file, ml, units = "cm", width = 20, height = 15, dpi = 300)
+          }, message = "Prepare pdf file... please wait.")
+
+        }else{
+          print("ggplot")
+          req(pdfall())
+          p <- pdfall()
+            withProgress({
+              ml <- marrangeGrob(p, nrow=1, ncol=1)
+
+                if(as.numeric(input$nbPicPage) == 4){
+                  ml <- marrangeGrob(p, nrow=2, ncol=2)
+                 }else if(as.numeric(input$nbPicPage) == 3){
+                  ml <- marrangeGrob(p, nrow= 1, ncol=as.numeric(input$nbPicPage))
+                  }else if(as.numeric(input$nbPicPage) == 2){
+                    if(input$verticaldisplay){
+                      ml <- marrangeGrob(p, nrow= as.numeric(input$nbPicPage), ncol= 1)
+                    }else{
+                      ml <- marrangeGrob(p, nrow= 1, ncol=as.numeric(input$nbPicPage))
+                    }
+                  }
+
+              ggsave(file, ml, units = "cm", width = 20, height = 15, dpi = 300)
+            }, message = "Prepare pdf file... please wait.")
+        }
         print('pdf output')
         
-        withProgress({
-          ml <- marrangeGrob(p, nrow=1, ncol=1)
-
-            if(as.numeric(input$nbPicPage) == 4){
-              ml <- marrangeGrob(p, nrow=2, ncol=2)
-             }else if(as.numeric(input$nbPicPage) == 3){
-              ml <- marrangeGrob(p, nrow= 1, ncol=as.numeric(input$nbPicPage))
-              }else if(as.numeric(input$nbPicPage) == 2){
-                if(input$verticaldisplay){
-                  ml <- marrangeGrob(p, nrow= as.numeric(input$nbPicPage), ncol= 1)
-                }else{
-                  ml <- marrangeGrob(p, nrow= 1, ncol=as.numeric(input$nbPicPage))
-                }
-              }
-
-          ggsave(file, ml, units = "cm", width = 20, height = 15, dpi = 300)
-        }, message = "Prepare pdf file... please wait.")
 
         
       }
