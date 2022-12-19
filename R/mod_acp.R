@@ -163,6 +163,11 @@ mod_acp_server <- function(id, r = r, session = session){
         return()
       }
       
+      if(ncol(acp_input) < 2){
+        shinyalert(title = "Oops", text="Not enough features in dataset for ACP. (<2)", type='error')
+        return()
+      }
+
       # Simplify features names
       tt <- stringr::str_split(colnames(acp_input), "__")
       tt1 <- sapply(tt,"[[",1)
@@ -189,6 +194,8 @@ mod_acp_server <- function(id, r = r, session = session){
         shinyalert(title = "Oops", text="Non unique features in table, consider filtering on metadata.", type='error')
         acp1 = NULL
       }
+
+      showNotification("Ready for plots ...", type="message", duration = 3)
       
       acp1
     })
@@ -229,6 +236,7 @@ mod_acp_server <- function(id, r = r, session = session){
     
     ## Table var
     acptabvar <- eventReactive(input$go2, {
+      req(acp1())
       cat(file=stderr(), 'ACP tab var... ', "\n")
       acptabvar = factoextra::get_pca_var(acp1())$coord %>% as.data.frame() %>% tibble::rownames_to_column(var = "features") 
       acptabvar

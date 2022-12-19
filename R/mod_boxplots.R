@@ -170,7 +170,6 @@ mod_boxplots_server <- function(id, r = r, session = session){
     
     boxtab <- eventReactive(c(input$go4, input$go3), {  #
       cat(file=stderr(), 'BOXTAB', "\n")
-
       req(r_values$subsetds_final_melt, input$fact3, r$ds1())
       r_values$tabF_melt2 <- tabF_melt2 <- tabF_melt <- r_values$subsetds_final_melt
       if(length(input$fact3) == 1){r_values$fact3ok <- fact3ok <- input$fact3
@@ -267,8 +266,9 @@ mod_boxplots_server <- function(id, r = r, session = session){
       eval(parse(text=fun))
 
       # tabfeat[[r_values$fact3ok]] <- factor(tabfeat[[r_values$fact3ok]], levels = input$sorted1)
+      
+      cat(file=stderr(), 'Factor', "\n")
       print(tabfeat[[r_values$fact3ok]])
-
      fun <-  glue::glue('p <- ggplot(tabfeat, aes(x = {r_values$fact3ok}, y = value, fill = {r_values$fact3ok})) + 
         theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(input$feat1) +
         theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1)) + 
@@ -293,7 +293,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
       r_values$ggly <- ggly <- ggplotly(p)
       }
 
-      if(input$ggplotstats1){
+      if(input$ggplotstats1 & max(table(tabfeat[[r_values$fact3ok]])) != 1){
         fun <-  glue::glue('
           ggstats <- ggbetweenstats(tabfeat, {r_values$fact3ok}, value, type = "nonparametric", 
               p.adjust.method = "fdr", pairwise.display = "significant", xlab = "", ylab = ytitle,
@@ -540,7 +540,8 @@ mod_boxplots_server <- function(id, r = r, session = session){
                     }
                   }
 
-              ggsave(file, ml, units = "cm", width = 20, height = 15, dpi = 300)
+              # ggsave(file, ml, units = "cm", width = 20, height = 15, dpi = 100)
+              ggsave(file, ml , width = 11, height = 8, dpi = 100)
             }, message = "Prepare pdf file... please wait.")
         }
         print('pdf output')
@@ -600,9 +601,12 @@ mod_boxplots_server <- function(id, r = r, session = session){
     #wilcoxBP
     wilcoxBP <- eventReactive(input$go3, {
       cat(file=stderr(), 'wilcoxBP table', "\n")
-      req(boxplot1())
+      req(boxplot1(), boxtab())
       Amelt <- boxplot1()$tabF_melt2
-      
+      if(max(table(boxtab()[, boxplot1()$fact3ok])) == 1){
+        return(NULL)
+      }
+
       pval_table <- data.frame()
       for(feat1 in unique(Amelt$features)){
         Ftabtest = Amelt[Amelt$features == feat1,] %>%
@@ -631,7 +635,11 @@ mod_boxplots_server <- function(id, r = r, session = session){
     
     output$wilcoxBP <- DT::renderDataTable({
       cat(file=stderr(), 'wilcoxBP DT', "\n")
-      wilcoxBP()
+      if(is.null(wilcoxBP())){
+        validate('\t\t\t\t\t\t\t\t\t\tNo tests possible.')
+      }else{
+        wilcoxBP()
+      }
     }, filter="top",options = list(pageLength = 5, scrollX = TRUE, server=TRUE)) # , rowCallback = DT::JS(rowCallback)) 
     
     output$wilcoxBP_download <- downloadHandler(
