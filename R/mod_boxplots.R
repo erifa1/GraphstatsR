@@ -77,8 +77,8 @@ mod_boxplots_ui <- function(id){
               ),
             actionButton(ns("go3"), "Run plot/stats & tests", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
             actionButton(ns("go4"), "Update plot only", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
-            downloadButton(outputId = ns("boxplots_download"), label = "Generate pdf and pngs (long process)"),
-            downloadButton(outputId = ns("downloadTAR"), label = "Download pngs")
+            downloadButton(outputId = ns("boxplots_download"), label = "Generate pdf and PNGs (long process)"),
+            downloadButton(outputId = ns("downloadTAR"), label = "Download PNGs")
         ),
         box(title = "Reorder boxplots:", width = 5, status = "warning", solidHeader = TRUE, collapsible = TRUE,
             uiOutput(ns("sortable"))#,
@@ -357,6 +357,8 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
         withProgress({
 
+          dir.create(paste(tmpdir, "/figures/", sep = ""), recursive = TRUE)
+          print(paste(tmpdir, "/figures/", sep = ""))
           for(i in 1:length(FEAT)){
             incProgress(1/length(FEAT))
             tt <- stringr::str_split(FEAT[i], "__")
@@ -417,13 +419,8 @@ mod_boxplots_server <- function(id, r = r, session = session){
                                 geom_boxplot()            
             }
 
-            if(input$pngs_out){
-            #   if(!dir.exists(input$outpath)){
-            #     dir.create(input$outpath, recursive = TRUE)
-            #   }
               print("WRITE PLOTS")
-              dir.create(paste(tmpdir, "/figures/", sep = ""), recursive = TRUE)
-              print(paste(tmpdir, "/figures/", sep = ""))
+            if(input$pngs_out){
               ggsave(glue::glue("{tmpdir}/figures/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
               tar(glue::glue("{tmpdir}/figures.tar"), files = glue::glue("{tmpdir}/figures") )
             }
@@ -439,7 +436,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
     
 
     pdfall_ggstat <- reactive({
-      cat(file=stderr(), 'ALL BOXPLOT', "\n")
+      cat(file=stderr(), 'ALL BOXPLOT ggstat', "\n")
       req(r_values$tabF_melt2, r_values$fact3ok)
 
         fact3ok <- r_values$fact3ok
@@ -496,19 +493,20 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
             eval(parse(text=fun))
 
-            if(input$pngs_out){
-            #   if(!dir.exists(input$outpath)){
-            #     dir.create(input$outpath, recursive = TRUE)
-            #   }
+            print("WRITE PLOTS")
+            dir.create(paste(tmpdir, "/figures_ggstat/", sep = ""), recursive = TRUE)
+            print(paste(tmpdir, "/figures_ggstat/", sep = ""))
 
-              print("WRITE PLOTS")
-              dir.create(paste(tmpdir, "/figures/", sep = ""), recursive = TRUE)
-              print(paste(tmpdir, "/figures/", sep = ""))
-              ggsave(glue::glue("{tmpdir}/figures/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
-              tar(glue::glue("{tmpdir}/figures.tar"), files = glue::glue("{tmpdir}/figures") )
+            if(input$pngs_out){
+              ggsave(glue::glue("{tmpdir}/figures_ggstat/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
+              tar(glue::glue("{tmpdir}/figures_ggstat.tar"), files = glue::glue("{tmpdir}/figures_ggstat") )
             }
 
             print(length(listP))
+          }
+
+          if(input$pngs_out){
+            showNotification("PNGs ready for download ...", type="message", duration = 5)
           }
 
         }, value = 0 ,message = "Processing boxplots ... please wait.")
@@ -517,14 +515,16 @@ mod_boxplots_server <- function(id, r = r, session = session){
       listP
     })
 
-    output$downloadTAR <- downloadHandler(
-        filename <- glue::glue("{tmpdir}/figures.tar"),
 
-        content <- function(file) {
-          file.copy(filename, file)
-        },
-        contentType = "application/tar"
-      )
+    output$downloadTAR <- downloadHandler(
+      filename <- glue::glue("{tmpdir}/figures.tar"),
+
+      content <- function(file) {
+        file.copy(filename, file)
+      },
+      contentType = "application/tar"
+    )
+
 
 
     output$boxplots_download <- downloadHandler(
