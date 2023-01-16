@@ -369,7 +369,7 @@ mod_inputs_server <- function(id, r = r, session = session){
 
           print("GLOM OK")
           fun = glue::glue("ds0 <- ds0 %>% group_by({input$mergefact}) %>% 
-            summarise(across(where(is.numeric), sum)) %>%
+            summarise(across(where(is.numeric), sum, na.rm = TRUE)) %>%
             mutate(type = unique(ds0$type), unit = unique(ds0$unit), .after = 1) %>% 
             rename(features = 1) %>%
             as.data.frame()
