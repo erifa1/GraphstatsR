@@ -38,7 +38,8 @@ mod_inputs_ui <- function(id){
               column(
                 width = 12,
                 actionButton(ns("launch_modal"), "Features table input module", 
-                  icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
+                  icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
+                actionButton(ns("ds_test_button"), "Data test")
               )
             ),
               tags$h3("Use filters to subset on features:"),
@@ -182,8 +183,21 @@ mod_inputs_server <- function(id, r = r, session = session){
         )
       })
 
+      # output$dl_ds_test <- downloadHandler(
+      #   filename = "metadata_template.csv",
+      #   content = function(file), {
+      #   dstest <- read.csv(system.file("dataset", "features_quanti_data.csv", package="graphstatsr"), sep = "\t")
+      #   write.csv(dstest, file, sep=",", row.names=FALSE)
+      # })
+
       output$table <- DT::renderDT({
-        res_filter$filtered()
+        print("renderDS")
+
+          if(all(c("features", "type", "unite") %in% colnames(res_filter$filtered()))){
+            res_filter$filtered()
+          }else{
+            validate('\t\tColumn "features", "type" and/or "unite" not found (beware of case sensitive).\nSee test datasets.')
+          }
       }, options = list(pageLength = 6, scrollX = TRUE))
 
 

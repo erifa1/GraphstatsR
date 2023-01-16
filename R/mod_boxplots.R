@@ -12,6 +12,7 @@
 #' @import PMCMRplus
 
 tmpdir <- tempdir()
+systim <- as.numeric(Sys.time())
 
 
 labels <- list(
@@ -64,7 +65,7 @@ mod_boxplots_ui <- function(id){
                   materialSwitch(ns("verticaldisplay"), label = "Vertical display in pdf or not (2 per page)", value = TRUE, status = "primary"),
                   sliderInput(ns("sizexlab"), label = "X labels size", min = 0, max = 1, value = 0.8, step = 0.05),
                   materialSwitch(ns("outlier_labs"), label = "Inform outlier in pdf output", value = TRUE, status = "primary"),
-                  materialSwitch(ns("pngs_out"), label = "Output png for each feature (long process)", value = FALSE, status = "primary"),
+                  # materialSwitch(ns("pngs_out"), label = "Output png for each feature (long process)", value = FALSE, status = "primary"),
                   # textInput(ns("outpath"), "Output path for pngs", ""),
                   width = 6
                   )
@@ -77,8 +78,8 @@ mod_boxplots_ui <- function(id){
               ),
             actionButton(ns("go3"), "Run plot/stats & tests", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
             actionButton(ns("go4"), "Update plot only", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
-            downloadButton(outputId = ns("boxplots_download"), label = "Generate pdf and PNGs (long process)"),
-            downloadButton(outputId = ns("downloadTAR"), label = "Download PNGs")
+            downloadButton(outputId = ns("boxplots_download"), label = "Download PDF (long process)"),
+            downloadButton(outputId = ns("downloadTAR"), label = "Download PNGs (long process)")
         ),
         box(title = "Reorder boxplots:", width = 5, status = "warning", solidHeader = TRUE, collapsible = TRUE,
             uiOutput(ns("sortable"))#,
@@ -158,13 +159,6 @@ mod_boxplots_server <- function(id, r = r, session = session){
                             `selected-text-format` = "count > 3"
                           )
         )
-        # updateTextInput(
-        #   session = session,
-        #   "outpath",
-        #   label = "Output path for pngs",
-        #   value = getwd(),
-        #   placeholder = NULL
-        # )
 
       }
     })
@@ -346,6 +340,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
     
     pdfall <- reactive({
       cat(file=stderr(), 'ALL BOXPLOT', "\n")
+      LL <- list()
       req(r_values$tabF_melt2, r_values$fact3ok)
 
         fact3ok <- r_values$fact3ok
@@ -419,11 +414,11 @@ mod_boxplots_server <- function(id, r = r, session = session){
                                 geom_boxplot()            
             }
 
-              print("WRITE PLOTS")
-            if(input$pngs_out){
-              ggsave(glue::glue("{tmpdir}/figures/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
-              tar(glue::glue("{tmpdir}/figures.tar"), files = glue::glue("{tmpdir}/figures") )
-            }
+            #   print("WRITE PLOTS")
+            # if(input$pngs_out){
+            #   ggsave(glue::glue("{tmpdir}/figures/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
+            #   tar(glue::glue("{tmpdir}/figures_{systim}.tar"), files = glue::glue("{tmpdir}/figures") )
+            # }
 
             print(length(listP))
           }
@@ -443,7 +438,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
         tabF_melt2 <- r_values$tabF_melt2
         tabF_melt2$sample.id <- as.character(tabF_melt2$sample.id)
         listP <- list()
-        FEAT = levels(tabF_melt2$features)
+        r_values$FEAT <- FEAT <- levels(tabF_melt2$features)
         print(head(FEAT))
 
         withProgress({
@@ -493,14 +488,14 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
             eval(parse(text=fun))
 
-            print("WRITE PLOTS")
-            dir.create(paste(tmpdir, "/figures_ggstat/", sep = ""), recursive = TRUE)
-            print(paste(tmpdir, "/figures_ggstat/", sep = ""))
+            # print("WRITE PLOTS")
+            # dir.create(paste(tmpdir, "/figures_ggstat/", sep = ""), recursive = TRUE)
+            # print(paste(tmpdir, "/figures_ggstat/", sep = ""))
 
-            if(input$pngs_out){
-              ggsave(glue::glue("{tmpdir}/figures_ggstat/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
-              tar(glue::glue("{tmpdir}/figures_ggstat.tar"), files = glue::glue("{tmpdir}/figures_ggstat") )
-            }
+            # if(input$pngs_out){
+            #   ggsave(glue::glue("{tmpdir}/figures_ggstat/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
+            #   tar(glue::glue("{tmpdir}/figures_ggstat.tar"), files = glue::glue("{tmpdir}/figures_ggstat") )
+            # }
 
             print(length(listP))
           }
@@ -517,9 +512,26 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
 
     output$downloadTAR <- downloadHandler(
-      filename <- glue::glue("{tmpdir}/figures.tar"),
+      filename <- glue::glue("{tmpdir}/figures_{systim}.tar"),
 
       content <- function(file) {
+        print("WRITE PLOTS")
+        req(pdfall())
+        listP <- pdfall()
+        FEAT = names(listP)
+        # browser()
+        withProgress({
+          for(i in 1:length(FEAT)){
+            incProgress(1/length(FEAT))
+            tt <- stringr::str_split(FEAT[i], "__")
+            ggsave(glue::glue("{tmpdir}/figures/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
+          }
+
+        }, value = 0, message = "Generating PNGs...")
+
+        tar(glue::glue("{tmpdir}/figures_{systim}.tar"), files = glue::glue("{tmpdir}/figures") )
+
+
         file.copy(filename, file)
       },
       contentType = "application/tar"
@@ -528,7 +540,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
 
     output$boxplots_download <- downloadHandler(
-      filename = "figures.pdf",
+      filename = glue::glue("figures_{systim}.pdf"),
       content = function(file) {
         print('DOWNLOAD ALL')
         if(input$ggstatOUT){
