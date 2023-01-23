@@ -45,7 +45,11 @@ mod_boxplots_ui <- function(id){
               label = "Feature to plot in boxplot:",
               choices = ""
             ),
-
+            selectInput(
+              ns("outtype"),
+              label = "Select specific type of features to download :",
+              choices = ""
+            ),
             dropMenu(
               actionButton("go0", "More parameters..."),
               {fluidRow(
@@ -140,16 +144,24 @@ mod_boxplots_server <- function(id, r = r, session = session){
     # Settings   
     observe({
       # req(metadata1(), r_values$subsetds_final_melt)
-      req(r$mt1(), r$fdata_melt())
+      req(r$mt1(), r$fdata_melt(), r$ds0())
       r_values$subsetds_final_melt <- r$fdata_melt()
       r_values$metadata_final <- r$mt1()
+
+
+      ds0 <- r$ds0()
+      print(names(ds0))
+      print(head(ds0))
+      type1 <- ds0[,2]  # colonne type
+      updateSelectInput(session, "outtype",
+                        choices = c("all", type1),
+                        selected = "all")
+
       if(is.data.frame(r$fdata_melt())){
         updateSelectInput(session, "feat1",
                           choices = unique(r_values$subsetds_final_melt[,"features"]),
                           selected = unique(r_values$subsetds_final_melt[,"features"])[1])
-        updateSelectInput(session, "fact2",
-                          choices = names(r_values$metadata_final),
-                          selected = names(r_values$metadata_final)[2])
+
         updatePickerInput(session, "fact3",
                           choices = names(r_values$metadata_final),
                           selected = names(r_values$metadata_final)[2],
@@ -342,18 +354,33 @@ mod_boxplots_server <- function(id, r = r, session = session){
       cat(file=stderr(), 'ALL BOXPLOT', "\n")
       LL <- list()
       req(r_values$tabF_melt2, r_values$fact3ok)
-
         fact3ok <- r_values$fact3ok
-        tabF_melt2 <- r_values$tabF_melt2
+
+        if(input$outtype == "all"){
+          tabF_melt2 <- r_values$tabF_melt2
+        }else{
+          tabF_melt2 <- r_values$tabF_melt2[ grep(paste("__", input$outtype, "__", sep = ""), r_values$tabF_melt2$features) ,] %>%
+            droplevels()    
+        }
         tabF_melt2$sample.id <- as.character(tabF_melt2$sample.id)
         listP <- list()
         FEAT = levels(tabF_melt2$features)
+
+        if(length(FEAT) > 200){
+            showNotification("More than 200 features to plot...", type="warning", duration = 5)
+        }
+
+
         print(head(FEAT))
 
+        save(list = ls(all.names = TRUE), file = "~/Bureau/tmp_debug.rdata", envir = environment()); print("SAVE0")
         withProgress({
 
-          dir.create(paste(tmpdir, "/figures/", sep = ""), recursive = TRUE)
-          print(paste(tmpdir, "/figures/", sep = ""))
+          print("GENERATING BOXPLOTS")
+          r_values$systim <- as.numeric(Sys.time())
+          dir.create(paste(tmpdir, "/figures_", r_values$systim, "/", sep = ""), recursive = TRUE)
+          print(paste(tmpdir, "/figures_", r_values$systim, "/", sep = ""))
+
           for(i in 1:length(FEAT)){
             incProgress(1/length(FEAT))
             tt <- stringr::str_split(FEAT[i], "__")
@@ -435,10 +462,21 @@ mod_boxplots_server <- function(id, r = r, session = session){
       req(r_values$tabF_melt2, r_values$fact3ok)
 
         fact3ok <- r_values$fact3ok
-        tabF_melt2 <- r_values$tabF_melt2
+        if(input$outtype == "all"){
+          tabF_melt2 <- r_values$tabF_melt2
+        }else{
+          tabF_melt2 <- r_values$tabF_melt2[ grep(paste("__", input$outtype, "__", sep = ""), r_values$tabF_melt2$features) ,] %>%
+            droplevels()    
+        }
+
         tabF_melt2$sample.id <- as.character(tabF_melt2$sample.id)
         listP <- list()
         r_values$FEAT <- FEAT <- levels(tabF_melt2$features)
+
+        if(length(FEAT) > 200){
+            showNotification("More than 200 features to plot ...", type="warning", duration = 5)
+        }
+
         print(head(FEAT))
 
         withProgress({
@@ -500,10 +538,6 @@ mod_boxplots_server <- function(id, r = r, session = session){
             print(length(listP))
           }
 
-          if(input$pngs_out){
-            showNotification("PNGs ready for download ...", type="message", duration = 5)
-          }
-
         }, value = 0 ,message = "Processing boxplots ... please wait.")
       print(length(listP))
       
@@ -512,24 +546,30 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
 
     output$downloadTAR <- downloadHandler(
-      filename <- glue::glue("{tmpdir}/figures_{systim}.tar"),
+      filename <- glue::glue("{tmpdir}/figures_pngs.tar"), 
 
       content <- function(file) {
         print("WRITE PLOTS")
         req(pdfall())
-        listP <- pdfall()
+        print(glue::glue("{tmpdir}/figures_pngs/"))
+
+        if(input$ggstatOUT){
+          listP <- pdfall_ggstat()
+        }else{
+          listP <- pdfall()
+        }
         FEAT = names(listP)
         # browser()
         withProgress({
           for(i in 1:length(FEAT)){
             incProgress(1/length(FEAT))
             tt <- stringr::str_split(FEAT[i], "__")
-            ggsave(glue::glue("{tmpdir}/figures/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
+            ggsave(glue::glue("{tmpdir}/figures_{r_values$systim}/{sapply(tt,'[[',2)}_boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
           }
 
         }, value = 0, message = "Generating PNGs...")
 
-        tar(glue::glue("{tmpdir}/figures_{systim}.tar"), files = glue::glue("{tmpdir}/figures") )
+        tar(glue::glue("{tmpdir}/figures_pngs.tar"), files = glue::glue("{tmpdir}/figures_{r_values$systim}") )
 
 
         file.copy(filename, file)
@@ -540,7 +580,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
 
     output$boxplots_download <- downloadHandler(
-      filename = glue::glue("figures_{systim}.pdf"),
+      filename = glue::glue("{}_figures_{systim}.pdf"),
       content = function(file) {
         print('DOWNLOAD ALL')
         if(input$ggstatOUT){

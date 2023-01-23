@@ -39,7 +39,7 @@ mod_inputs_ui <- function(id){
                 width = 12,
                 actionButton(ns("launch_modal"), "Features table input module", 
                   icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
-                actionButton(ns("ds_test_button"), "Data test")
+                downloadButton(ns("dl_ds_test"), "Data test")
               )
             ),
               tags$h3("Use filters to subset on features:"),
@@ -183,20 +183,24 @@ mod_inputs_server <- function(id, r = r, session = session){
         )
       })
 
-      # output$dl_ds_test <- downloadHandler(
-      #   filename = "metadata_template.csv",
-      #   content = function(file), {
-      #   dstest <- read.csv(system.file("dataset", "features_quanti_data.csv", package="graphstatsr"), sep = "\t")
-      #   write.csv(dstest, file, sep=",", row.names=FALSE)
-      # })
+      output$dl_ds_test <- downloadHandler(
+        filename = glue::glue("datatest.csv"),
+        content = function(file){
+        print("DATATEST")
+
+        dstest <- read.csv(system.file("dataset", "features_quanti_data.csv", package="graphstatsr"), sep = ",")
+        write.csv(dstest, file, row.names=FALSE)
+      },
+        contentType = "application/tar"
+      )
 
       output$table <- DT::renderDT({
         print("renderDS")
 
-          if(all(c("features", "type", "unite") %in% colnames(res_filter$filtered()))){
+          if(all(c("features", "type", "unit") %in% colnames(res_filter$filtered()))){
             res_filter$filtered()
           }else{
-            validate('\t\tColumn "features", "type" and/or "unite" not found (beware of case sensitive).\nSee test datasets.')
+            validate('\t\tColumn "features", "type" and/or "unit" not found (beware of case sensitive).\nSee test datasets.')
           }
       }, options = list(pageLength = 6, scrollX = TRUE))
 
@@ -494,6 +498,12 @@ mod_inputs_server <- function(id, r = r, session = session){
       })
 
 
+      r$ds0 <- reactive({
+        req(res_filter$filtered())
+        res_filter$filtered()
+
+      })
+
       r$fdata <- reactive({
         print("reactive r")
         req(r_values$subsetds_final)
@@ -521,6 +531,7 @@ mod_inputs_server <- function(id, r = r, session = session){
         req(r_values$wgt1)
         r_values$wgt1
       })
+
       r$norm1 <- reactive({
         req(r_values$norm1)
         r_values$norm1
