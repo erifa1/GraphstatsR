@@ -550,7 +550,6 @@ mod_easystats_server <- function(id, r = r, session = session){
           clr = function(x){log(x+1) - rowMeans(log(x+1), na.rm = TRUE)}
           normds1 <- clr(ds1)
         }
-        # save(list = ls(all.names = TRUE), file = "debug.rdata", envir = environment()); print("SAVE0")
 
         print("Final data")
 

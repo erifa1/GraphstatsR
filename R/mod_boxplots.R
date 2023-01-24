@@ -65,7 +65,7 @@ mod_boxplots_ui <- function(id){
                 column(
                   h3("PDF and PNGs output settings"),
                   selectInput( ns("nbPicPage"), label = "Select number of plot per pdf page (max 4 per page):", choices = c(1:4), selected = 1),
-                  materialSwitch(ns("ggstatOUT"), label = "PDF with ggstat plots", value = FALSE, status = "primary"),
+                  materialSwitch(ns("ggstatOUT"), label = "Output PDF/PNGs with ggstat plots", value = FALSE, status = "primary"),
                   materialSwitch(ns("verticaldisplay"), label = "Vertical display in pdf or not (2 per page)", value = TRUE, status = "primary"),
                   sliderInput(ns("sizexlab"), label = "X labels size", min = 0, max = 1, value = 0.8, step = 0.05),
                   materialSwitch(ns("outlier_labs"), label = "Inform outlier in pdf output", value = TRUE, status = "primary"),
@@ -82,8 +82,7 @@ mod_boxplots_ui <- function(id){
               ),
             actionButton(ns("go3"), "Run plot/stats & tests", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
             actionButton(ns("go4"), "Update plot only", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
-            downloadButton(outputId = ns("boxplots_download"), label = "Download PDF (long process)"),
-            downloadButton(outputId = ns("downloadTAR"), label = "Download PNGs (long process)")
+            uiOutput(ns("DLbuttons"))
         ),
         box(title = "Reorder boxplots:", width = 5, status = "warning", solidHeader = TRUE, collapsible = TRUE,
             uiOutput(ns("sortable"))#,
@@ -373,7 +372,6 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
         print(head(FEAT))
 
-        save(list = ls(all.names = TRUE), file = "~/Bureau/tmp_debug.rdata", envir = environment()); print("SAVE0")
         withProgress({
 
           print("GENERATING BOXPLOTS")
@@ -550,16 +548,19 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
       content <- function(file) {
         print("WRITE PLOTS")
-        req(pdfall())
         print(glue::glue("{tmpdir}/figures_pngs/"))
 
         if(input$ggstatOUT){
+          req(pdfall_ggstat())
           listP <- pdfall_ggstat()
+          print(names(listP))
         }else{
+          req(pdfall())
           listP <- pdfall()
         }
         FEAT = names(listP)
-        # browser()
+
+
         withProgress({
           for(i in 1:length(FEAT)){
             incProgress(1/length(FEAT))
@@ -580,14 +581,13 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
 
     output$boxplots_download <- downloadHandler(
-      filename = glue::glue("{}_figures_{systim}.pdf"),
+      filename = glue::glue("{input$outtype}_figures_{systim}.pdf"),
       content = function(file) {
         print('DOWNLOAD ALL')
         if(input$ggstatOUT){
           print("ggstat")
           req(pdfall_ggstat())
           p <- pdfall_ggstat()
-          
           withProgress({
             ml <- marrangeGrob(p, nrow=1, ncol=1)
             ggsave(file, ml, units = "cm", width = 20, height = 15, dpi = 300)
@@ -622,6 +622,15 @@ mod_boxplots_server <- function(id, r = r, session = session){
         
       }
     )
+
+
+      output$DLbuttons <- renderUI({
+        req(input$go3)
+        tagList(
+            downloadButton(outputId = ns("boxplots_download"), label = "Download PDF (long process)"),
+            downloadButton(outputId = ns("downloadTAR"), label = "Download PNGs (long process)")
+        )
+      })
     
     
     
