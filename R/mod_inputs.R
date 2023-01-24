@@ -38,7 +38,8 @@ mod_inputs_ui <- function(id){
               column(
                 width = 12,
                 actionButton(ns("launch_modal"), "Features table input module", 
-                  icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
+                  icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
+                downloadButton(ns("dl_ds_test"), "Data test")
               )
             ),
               tags$h3("Use filters to subset on features:"),
@@ -59,8 +60,11 @@ mod_inputs_ui <- function(id){
                 )
               ),
           box(title = "Input metadata dataset", status = "warning", solidHeader = TRUE, width=12,
-              actionButton(ns("launch_modal2"), "Metadata input module", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
-              downloadButton(outputId = ns("metadatTemplate_download"), label = "Download metadata template"),
+                actionButton(ns("launch_modal2"), "Metadata input module", icon = icon("play-circle"), 
+                  style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
+                downloadButton(ns("dl_mt_test"), "MetaData test"),
+                uiOutput(ns("DLTemp")),
+                # downloadButton(outputId = ns("metadatTemplate_download"), label = "Download metadata template"),
               tags$h3("Use filters to subset on metadata, and click on rows you need to remove:"),
               column(
                 width = 3,
@@ -182,8 +186,37 @@ mod_inputs_server <- function(id, r = r, session = session){
         )
       })
 
+      output$dl_ds_test <- downloadHandler(
+        filename = glue::glue("datatest.csv"),
+        content = function(file){
+        print("DATATEST")
+
+        dstest <- read.csv(system.file("dataset", "features_quanti_data.csv", package="graphstatsr"), sep = ",")
+        write.csv(dstest, file, row.names=FALSE)
+      },
+        contentType = "application/tar"
+      )
+
+
+      output$dl_mt_test <- downloadHandler(
+        filename = glue::glue("metadata_test.csv"),
+        content = function(file){
+        print("METADATATEST")
+
+        mttest <- read.csv(system.file("dataset", "metadata_file.csv", package="graphstatsr"), sep = "\t")
+        write.csv(mttest, file, row.names=FALSE)
+      },
+        contentType = "application/tar"
+      )
+
       output$table <- DT::renderDT({
-        res_filter$filtered()
+        print("renderDS")
+
+          if(all(c("features", "type", "unit") %in% colnames(res_filter$filtered()))){
+            res_filter$filtered()
+          }else{
+            validate('\t\tColumn "features", "type" and/or "unit" not found (beware of case sensitive).\nSee test datasets.')
+          }
       }, options = list(pageLength = 6, scrollX = TRUE))
 
 
@@ -209,7 +242,7 @@ mod_inputs_server <- function(id, r = r, session = session){
           DF <- data.frame(row.names = names(A)[4:ncol(A)])
           DF$sample.id <- names(A)[4:ncol(A)]
           DF$factor_example <- glue::glue("group_{rep(LETTERS[1:3], each = 2, length.out=nrow(DF))}")
-          write.csv(DF, file, sep=",", row.names=FALSE)
+          write.csv(DF, file , row.names=FALSE)
         }else{
           print("no dataset")
           return(NULL)
@@ -217,6 +250,12 @@ mod_inputs_server <- function(id, r = r, session = session){
 
       }
     )
+
+    output$DLTemp <- renderUI({
+      # req(input$launch_modal)
+      req(data())
+        downloadButton(outputId = ns("metadatTemplate_download"), label = "Download metadata template")
+    })
 
 
     # Input metadata dev 
@@ -358,7 +397,6 @@ mod_inputs_server <- function(id, r = r, session = session){
         # print(mt1$sample.id)
         ds0 <- feat1 %>% select(-samplenames_out)
         # print(colnames(ds0))
-        # browser()
 
         if(input$mergefact != "Raw"){
           if(length(unique(feat1$type)) > 1 |  length(unique(feat1$unit)) > 1){
@@ -377,7 +415,6 @@ mod_inputs_server <- function(id, r = r, session = session){
           eval(parse(text=fun))
         }
 
-          # browser()
 
           if(max(table(glue::glue("{ds0[,1]}__{ds0[,2]}__{ds0[,3]}"))) != 1){
             print("non unique features id")
@@ -480,6 +517,12 @@ mod_inputs_server <- function(id, r = r, session = session){
       })
 
 
+      r$ds0 <- reactive({
+        req(res_filter$filtered())
+        res_filter$filtered()
+
+      })
+
       r$fdata <- reactive({
         print("reactive r")
         req(r_values$subsetds_final)
@@ -507,6 +550,7 @@ mod_inputs_server <- function(id, r = r, session = session){
         req(r_values$wgt1)
         r_values$wgt1
       })
+
       r$norm1 <- reactive({
         req(r_values$norm1)
         r_values$norm1
