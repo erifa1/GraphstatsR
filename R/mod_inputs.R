@@ -211,11 +211,10 @@ mod_inputs_server <- function(id, r = r, session = session){
 
       output$table <- DT::renderDT({
         print("renderDS")
-
-          if(all(c("features", "type", "unit") %in% colnames(res_filter$filtered()))){
+          if(all( stringr::str_detect( colnames(res_filter$filtered())[1:3], c("[Ff]eature", "[Tt]ype", "[Uu]nit")) )) {
             res_filter$filtered()
           }else{
-            validate('\t\tColumn "features", "type" and/or "unit" not found (beware of case sensitive).\nSee test datasets.')
+            validate(glue::glue('\t\tColumn "features", "type" and/or "unit" not found or not in this order.\n Your column names: {paste(colnames(res_filter$filtered())[1:3], collapse = ", " )}\nSee test datasets.')) 
           }
       }, options = list(pageLength = 6, scrollX = TRUE))
 
