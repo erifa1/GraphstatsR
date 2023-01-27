@@ -60,6 +60,7 @@ mod_boxplots_ui <- function(id){
                   materialSwitch(ns("ggplotstats1"), label = "Display ggstatsplot", value = TRUE, status = "primary"),
                   materialSwitch(ns("plotall"), label = "Plot all conditions (even NAs)", value = TRUE, status = "primary"),
                   materialSwitch(ns("grey_mode"), label = "Colored boxplot", value = TRUE, status = "primary"),
+                  checkboxInput(ns("barplot_samples"), label = "Display barplot per samples."),
                   width = 6
                   ),
                 column(
@@ -94,6 +95,12 @@ mod_boxplots_ui <- function(id){
       #       plotOutput(ns("boxplot_out"), height = "500")
       #   )
       # ),
+      fluidRow(
+        box(width = 12, 
+            title = 'Barplot:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+            plotOutput(ns("barplot_out1"), height = "500")
+        )
+      ),
       fluidRow(
         box(width = 12, 
             title = 'Boxplot:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
@@ -318,13 +325,58 @@ mod_boxplots_server <- function(id, r = r, session = session){
       
 
       outlist$p <- p
+      outlist$tabfeat <- tabfeat
       outlist$tabF_melt2 <- r_values$tabF_melt2
       outlist$fact3ok <- r_values$fact3ok 
       outlist$ggly <- ggly
-
+      # save(list = ls(all.names = TRUE), file = "~/Bureau/tmp_debug.rdata", 
+      # envir = environment()); print("SAVE0")
       outlist
     })
     
+
+    barplot1 <- eventReactive(c(input$go4, input$go3), {
+      print("BARPLOT")
+      req(boxplot1)
+      tabmelt <- boxplot1()$tabfeat
+      DF2 <- DF1 <- tabmelt[tabmelt$features == input$feat1, ]
+
+      DF1ok <- DF1 %>% mutate(across(where(is.numeric), ~na_if(., -999))) %>% 
+      mutate(across(where(is.numeric), ~na_if(., -888))) %>%
+      arrange(newfact)
+
+      DF1ok$sample.id <- forcats::fct_relevel(DF1ok$sample.id, levels = DF1ok$sample.id)
+      
+      DF2$sample.id <- forcats::fct_relevel(DF2$sample.id, levels = DF2$sample.id)
+      DF2[DF2 == -999] <- ">ULOQ"
+      DF2[DF2 == -888] <- "<LLOQ"
+      DF2$value <- as.character(DF2$value)
+
+
+      # col1 <- input$feat1
+      p <- ggplot(DF1ok, mapping = aes(x = .data[["sample.id"]], 
+        y = .data[["value"]], 
+        fill = .data[["newfact"]], order = .data[["newfact"]])) + 
+        geom_bar(stat = "identity") + 
+        geom_text(data=DF2, aes(x = .data[["sample.id"]], 
+          y = 0.03 * max(DF1[,"value"], na.rm = TRUE) , label= .data[["value"]]), # DF2[,"value"]
+          col='black', size=3, angle=90) + 
+        theme_bw()
+
+        # save(list = ls(all.names = TRUE), file = "~/Bureau/tmp_debug.rdata", 
+        # envir = environment()); print("SAVE0")
+
+      p
+
+
+    })
+
+    output$barplot_out1 <- renderPlot({
+      req(barplot1())
+      req(input$go3)
+        bp1 <- barplot1()
+        bp1
+    }, res = 100)
 
     
     output$boxplotly1 <- renderPlotly({
@@ -694,8 +746,8 @@ mod_boxplots_server <- function(id, r = r, session = session){
           filter(!is.na(value)) 
         if(nrow(Ftabtest)==0){next}
         if(length(which(table(Ftabtest[Ftabtest$features == feat1,boxplot1()$fact3ok]) >= 3)) < 2){next} # si moins de 2 groupes avec au moins 3 repetitions next.
-        print(feat1)
-        print(table(Ftabtest[Ftabtest$features == feat1,boxplot1()$fact3ok]))
+        # print(feat1)
+        # print(table(Ftabtest[Ftabtest$features == feat1,boxplot1()$fact3ok]))
         wcoxtab = pairwise.wilcox.test(Ftabtest[Ftabtest$features == feat1,"value"], as.factor(Ftabtest[,boxplot1()$fact3ok]),
                                        p.adjust.method = "none")
         
