@@ -60,6 +60,7 @@ mod_boxplots_ui <- function(id){
                   materialSwitch(ns("ggplotstats1"), label = "Display ggstatsplot", value = TRUE, status = "primary"),
                   materialSwitch(ns("plotall"), label = "Plot all conditions (even NAs)", value = TRUE, status = "primary"),
                   materialSwitch(ns("grey_mode"), label = "Colored boxplot", value = TRUE, status = "primary"),
+                  materialSwitch(ns("y0"), label = "Set y lower limit to 0", value = TRUE, status = "primary"),
                   width = 6
                   ),
                 column(
@@ -282,6 +283,10 @@ mod_boxplots_server <- function(id, r = r, session = session){
         labs(fill="")')
       eval(parse(text=fun))
 
+      if(input$y0){
+        p <- p + coord_cartesian(ylim = c(0, NA ))
+      }
+
       if(!input$grey_mode){
         p <- p + 
             geom_boxplot(fill = "grey")
@@ -307,6 +312,11 @@ mod_boxplots_server <- function(id, r = r, session = session){
               outlier.tagging = TRUE, outlier.label = "sample.id", results.subtitle = FALSE, title = input$feat1)
               ')
         eval(parse(text=fun))
+
+        if(input$y0){
+          ggstats <- ggstats + coord_cartesian(ylim = c(0, NA))
+        }
+
         r_values$ggstats <- ggstats
         outlist$ggstats <- ggstats
       }
@@ -422,6 +432,10 @@ mod_boxplots_server <- function(id, r = r, session = session){
           labs(fill="")')
             eval(parse(text=fun))
 
+            if(input$y0){
+              listP[[FEAT[i]]] <- listP[[FEAT[i]]] + coord_cartesian(ylim = c(0, NA ))
+            }
+
             if(input$outlier_labs){
               listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
                                 ggrepel::geom_text_repel(aes(label = outlier), na.rm = TRUE, show.legend = F, 
@@ -521,8 +535,11 @@ mod_boxplots_server <- function(id, r = r, session = session){
               p.adjust.method = "fdr", pairwise.display = "significant", xlab = "", ylab = ytitle,
               outlier.tagging = TRUE, outlier.label = "sample.id", title = FEAT[i], results.subtitle = FALSE)')
 
-
             eval(parse(text=fun))
+
+            if(input$y0){
+              listP[[FEAT[i]]] <- listP[[FEAT[i]]] + coord_cartesian(ylim = c(0, NA))
+            }
 
             # print("WRITE PLOTS")
             # dir.create(paste(tmpdir, "/figures_ggstat/", sep = ""), recursive = TRUE)
