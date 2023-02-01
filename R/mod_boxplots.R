@@ -9,6 +9,7 @@
 #' @importFrom shiny NS tagList 
 #' @importFrom sortable rank_list bucket_list add_rank_list sortable_options
 #' @importFrom ggstatsplot ggbetweenstats
+#' @importFrom forcats relevel
 #' @import PMCMRplus
 
 tmpdir <- tempdir()
@@ -341,16 +342,28 @@ mod_boxplots_server <- function(id, r = r, session = session){
       tabmelt <- boxplot1()$tabfeat
       DF2 <- DF1 <- tabmelt[tabmelt$features == input$feat1, ]
 
-      DF1ok <- DF1 %>% mutate(across(where(is.numeric), ~na_if(., -999))) %>% 
-      mutate(across(where(is.numeric), ~na_if(., -888))) %>%
-      arrange(newfact)
+      sorted1 <- input$sorted1
+      stashed1 <- input$stashed1
 
-      DF1ok$sample.id <- forcats::fct_relevel(DF1ok$sample.id, levels = DF1ok$sample.id)
-      
+
+      save(list = ls(all.names = TRUE), file = "~/Bureau/tmp_debug.rdata", 
+      envir = environment()); print("SAVE0")
+
+      #input$sorted1 <- sample(unique(DF1ok$newfact))
+      DF1ok0 <- DF1 %>% mutate(across(where(is.numeric), ~na_if(., -999))) %>% 
+      mutate(across(where(is.numeric), ~na_if(., -888))) %>%
+      mutate_if(is.character,as.factor) %>% 
+      arrange(match(newfact, input$sorted1), value ) %>% 
+      mutate(newfact=forcats::fct_relevel(newfact, input$sorted1))
+
+      DF1ok <- DF1ok0 %>% mutate(sample.id = forcats::fct_relevel(sample.id, as.character(DF1ok0$sample.id) )) 
+
       DF2$sample.id <- forcats::fct_relevel(DF2$sample.id, levels = DF2$sample.id)
-      DF2[DF2 == -999] <- ">ULOQ"
-      DF2[DF2 == -888] <- "<LLOQ"
+
+      DF2$value[DF2$value == -999] <- ">ULOQ"
+      DF2$value[DF2$value == -888] <- "<LLOQ"
       DF2$value <- as.character(DF2$value)
+
 
 
       # col1 <- input$feat1
@@ -363,8 +376,6 @@ mod_boxplots_server <- function(id, r = r, session = session){
           col='black', size=3, angle=90) + 
         theme_bw()
 
-        # save(list = ls(all.names = TRUE), file = "~/Bureau/tmp_debug.rdata", 
-        # envir = environment()); print("SAVE0")
 
       p
 
