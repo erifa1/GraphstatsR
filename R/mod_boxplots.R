@@ -350,22 +350,25 @@ mod_boxplots_server <- function(id, r = r, session = session){
       envir = environment()); print("SAVE0")
 
       #input$sorted1 <- sample(unique(DF1ok$newfact))
+      print("BARPLOT2")
       DF1ok0 <- DF1 %>% mutate(across(where(is.numeric), ~na_if(., -999))) %>% 
       mutate(across(where(is.numeric), ~na_if(., -888))) %>%
       mutate_if(is.character,as.factor) %>% 
       arrange(match(newfact, input$sorted1), value ) %>% 
       mutate(newfact=forcats::fct_relevel(newfact, input$sorted1))
 
+      print("BARPLOT3 levels")
       DF1ok <- DF1ok0 %>% mutate(sample.id = forcats::fct_relevel(sample.id, as.character(DF1ok0$sample.id) )) 
 
       DF2$sample.id <- forcats::fct_relevel(DF2$sample.id, levels = DF2$sample.id)
 
+      print("BARPLOT3 replace lloq")
       DF2$value[DF2$value == -999] <- ">ULOQ"
       DF2$value[DF2$value == -888] <- "<LLOQ"
       DF2$value <- as.character(DF2$value)
 
 
-
+      print("Generate BARPLOT")
       # col1 <- input$feat1
       p <- ggplot(DF1ok, mapping = aes(x = .data[["sample.id"]], 
         y = .data[["value"]], 
@@ -373,7 +376,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
         geom_bar(stat = "identity") + 
         geom_text(data=DF2, aes(x = .data[["sample.id"]], 
           y = 0.03 * max(DF1[,"value"], na.rm = TRUE) , label= .data[["value"]]), # DF2[,"value"]
-          col='black', size=3, angle=90) + 
+          col='black', size=3, angle=45) + 
         theme_bw()
 
 
