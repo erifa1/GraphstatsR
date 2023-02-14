@@ -7,11 +7,14 @@ Description: A shiny app to easily generate advanced graphics and some non
     parametric tests.
 License: MIT + file LICENSE
 Imports: 
+    base64enc,
+    bit64,
     config (>= 0.3.1),
     datamods,
     dplyr,
     DT,
     factoextra,
+    forcats,
     ggplot2,
     ggrepel,
     ggstatsplot,

@@ -9,7 +9,7 @@
 #' @importFrom shiny NS tagList 
 #' @importFrom sortable rank_list bucket_list add_rank_list sortable_options
 #' @importFrom ggstatsplot ggbetweenstats
-#' @importFrom forcats relevel
+#' @importFrom forcats fct_relevel
 #' @import PMCMRplus
 
 tmpdir <- tempdir()
@@ -96,12 +96,14 @@ mod_boxplots_ui <- function(id){
       #       plotOutput(ns("boxplot_out"), height = "500")
       #   )
       # ),
+
       fluidRow(
         box(width = 12, 
             title = 'Barplot:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
             plotOutput(ns("barplot_out1"), height = "500")
         )
       ),
+
       fluidRow(
         box(width = 12, 
             title = 'Boxplot:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
@@ -319,35 +321,18 @@ mod_boxplots_server <- function(id, r = r, session = session){
         outlist$ggstats <- ggstats
       }
 
-
-      
-      
       cat(file=stderr(), 'BOXPLOT done', "\n")
       
 
-      outlist$p <- p
-      outlist$tabfeat <- tabfeat
-      outlist$tabF_melt2 <- r_values$tabF_melt2
-      outlist$fact3ok <- r_values$fact3ok 
-      outlist$ggly <- ggly
-      # save(list = ls(all.names = TRUE), file = "~/Bureau/tmp_debug.rdata", 
-      # envir = environment()); print("SAVE0")
-      outlist
-    })
-    
 
-    barplot1 <- eventReactive(c(input$go4, input$go3), {
-      print("BARPLOT")
-      req(boxplot1)
-      tabmelt <- boxplot1()$tabfeat
+      cat(file=stderr(), 'BARPLOT start', "\n")
+
+      tabmelt <- tabfeat %>% ungroup()
       DF2 <- DF1 <- tabmelt[tabmelt$features == input$feat1, ]
 
+      feat1 <- input$feat1
       sorted1 <- input$sorted1
       stashed1 <- input$stashed1
-
-
-      save(list = ls(all.names = TRUE), file = "~/Bureau/tmp_debug.rdata", 
-      envir = environment()); print("SAVE0")
 
       #input$sorted1 <- sample(unique(DF1ok$newfact))
       print("BARPLOT2")
@@ -355,7 +340,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
       mutate(across(where(is.numeric), ~na_if(., -888))) %>%
       mutate_if(is.character,as.factor) %>% 
       arrange(match(newfact, input$sorted1), value ) %>% 
-      mutate(newfact=forcats::fct_relevel(newfact, input$sorted1))
+      mutate(newfact=forcats::fct_relevel(newfact, input$sorted1 ))  #HERE
 
       print("BARPLOT3 levels")
       DF1ok <- DF1ok0 %>% mutate(sample.id = forcats::fct_relevel(sample.id, as.character(DF1ok0$sample.id) )) 
@@ -370,7 +355,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
       print("Generate BARPLOT")
       # col1 <- input$feat1
-      p <- ggplot(DF1ok, mapping = aes(x = .data[["sample.id"]], 
+      r_values$barplot1 <- p_barplot <- ggplot(DF1ok, mapping = aes(x = .data[["sample.id"]], 
         y = .data[["value"]], 
         fill = .data[["newfact"]], order = .data[["newfact"]])) + 
         geom_bar(stat = "identity") + 
@@ -380,16 +365,30 @@ mod_boxplots_server <- function(id, r = r, session = session){
         theme_bw()
 
 
-      p
+      cat(file=stderr(), 'BARPLOT done', "\n")
+      
 
 
+
+      outlist$p_barplot <- p_barplot
+      outlist$p <- p
+      outlist$tabfeat <- tabfeat
+      outlist$tabF_melt2 <- r_values$tabF_melt2
+      outlist$fact3ok <- r_values$fact3ok 
+      outlist$ggly <- ggly
+      save(list = ls(all.names = TRUE), file = "~/Bureau/tmp_debug.rdata", 
+      envir = environment()); print("SAVE0")
+      outlist
     })
+    
 
     output$barplot_out1 <- renderPlot({
-      req(barplot1())
+      # req(barplot1())
       req(input$go3)
-        bp1 <- barplot1()
-        bp1
+      if(!is.null(r_values$ggly)){
+        bp1 <- boxplot1()
+        bp1$p_barplot
+      }
     }, res = 100)
 
     
