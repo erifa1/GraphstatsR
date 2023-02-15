@@ -203,7 +203,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
       # print(r_values$fact3ok)
       
       
-      fun <-  glue::glue('tabfeat = tabF_melt2[tabF_melt2$features == input$feat1,] %>% 
+      fun <-  glue::glue('tabfeat <- tabF_melt2[tabF_melt2$features == input$feat1,] %>% 
         group_by({fact3ok}) %>% 
         mutate(outlier=ifelse(is_outlier(value), as.character(sample.id), NA))')
       eval(parse(text=fun))
@@ -275,18 +275,20 @@ mod_boxplots_server <- function(id, r = r, session = session){
         ytitle <- input$custom_ytitle
       }
       fun <- glue::glue("
-          tabfeat <- tabfeat0 %>%
+          tabfeat_barplot <- tabfeat <- tabfeat0 %>%
             dplyr::filter({r_values$fact3ok} %in% input$sorted1) %>%
             droplevels() %>%
             mutate({r_values$fact3ok} = factor({r_values$fact3ok}, levels = input$sorted1))
         ")
       eval(parse(text=fun))
 
+      tabfeat$value[tabfeat$value == -888 | tabfeat$value == -999] <- NA  # LLOQ / ULOQ values
+
       # tabfeat[[r_values$fact3ok]] <- factor(tabfeat[[r_values$fact3ok]], levels = input$sorted1)
       
       cat(file=stderr(), 'Factor', "\n")
       print(tabfeat[[r_values$fact3ok]])
-     fun <-  glue::glue('p <- ggplot(tabfeat, aes(x = {r_values$fact3ok}, y = value, fill = {r_values$fact3ok})) + 
+     fun <-  glue::glue('r_values$boxplot1 <- p <- ggplot(tabfeat, aes(x = {r_values$fact3ok}, y = value, fill = {r_values$fact3ok})) + 
         theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(input$feat1) +
         theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1)) + 
         labs(fill="")')
@@ -327,7 +329,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
       cat(file=stderr(), 'BARPLOT start', "\n")
 
-      tabmelt <- tabfeat %>% ungroup()
+      tabmelt <- tabfeat_barplot %>% ungroup()
       DF2 <- DF1 <- tabmelt[tabmelt$features == input$feat1, ]
 
       feat1 <- input$feat1
@@ -339,8 +341,8 @@ mod_boxplots_server <- function(id, r = r, session = session){
       DF1ok0 <- DF1 %>% mutate(across(where(is.numeric), ~na_if(., -999))) %>% 
       mutate(across(where(is.numeric), ~na_if(., -888))) %>%
       mutate_if(is.character,as.factor) %>% 
-      arrange(match(newfact, input$sorted1), value ) %>% 
-      mutate(newfact=forcats::fct_relevel(newfact, input$sorted1 ))  #HERE
+      arrange(match(newfact, input$sorted1), value) %>%  # 
+      mutate(newfact=forcats::fct_relevel(newfact, input$sorted1 ))
 
       print("BARPLOT3 levels")
       DF1ok <- DF1ok0 %>% mutate(sample.id = forcats::fct_relevel(sample.id, as.character(DF1ok0$sample.id) )) 
@@ -352,6 +354,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
       DF2$value[DF2$value == -888] <- "<LLOQ"
       DF2$value <- as.character(DF2$value)
 
+      DF1ok$value[is.na(DF1ok$value)] <- 0 #replace NA to 0 to keep filled colors when missing data.
 
       print("Generate BARPLOT")
       # col1 <- input$feat1
@@ -376,8 +379,8 @@ mod_boxplots_server <- function(id, r = r, session = session){
       outlist$tabF_melt2 <- r_values$tabF_melt2
       outlist$fact3ok <- r_values$fact3ok 
       outlist$ggly <- ggly
-      save(list = ls(all.names = TRUE), file = "~/Bureau/tmp_debug.rdata", 
-      envir = environment()); print("SAVE0")
+      # save(list = ls(all.names = TRUE), file = "~/Bureau/tmp_debug.rdata", 
+      # envir = environment()); print("SAVE0")
       outlist
     })
     
