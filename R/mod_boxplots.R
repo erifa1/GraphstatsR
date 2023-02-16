@@ -68,7 +68,12 @@ mod_boxplots_ui <- function(id){
                 column(
                   h3("PDF and PNGs output settings"),
                   selectInput( ns("nbPicPage"), label = "Select number of plot per pdf page (max 4 per page):", choices = c(1:4), selected = 1),
-                  materialSwitch(ns("ggstatOUT"), label = "Output PDF/PNGs with ggstat plots", value = FALSE, status = "primary"),
+                  # materialSwitch(ns("ggstatOUT"), label = "Output PDF/PNGs with ggstat plots", value = FALSE, status = "primary"),
+                 radioGroupButtons(
+                   inputId = ns("outformat1"),
+                   label = "PDF/PNG output format", 
+                   choices = c("boxplot", "barplot", "boxplot_stats"),
+                   status = "primary"),
                   materialSwitch(ns("verticaldisplay"), label = "Vertical display in pdf or not (2 per page)", value = TRUE, status = "primary"),
                   sliderInput(ns("sizexlab"), label = "X labels size", min = 0, max = 1, value = 0.8, step = 0.05),
                   materialSwitch(ns("outlier_labs"), label = "Inform outlier in pdf output", value = TRUE, status = "primary"),
@@ -546,36 +551,69 @@ mod_boxplots_server <- function(id, r = r, session = session){
               }
 
             if(nrow(DF1ok) == 0){print("no data"); next}
+
+            if( input$outformat1 == "boxplot_stats"){
+
+              fun <-  glue::glue('
+                listP[[FEAT[i]]] <- ggbetweenstats(DF1ok, {r_values$fact3ok}, value, type = "nonparametric", 
+                p.adjust.method = "fdr", pairwise.display = "significant", xlab = "", ylab = ytitle,
+                outlier.tagging = TRUE, outlier.label = "sample.id", title = FEAT[i], results.subtitle = FALSE)')
+              eval(parse(text=fun))     
+
+            }else if(input$outformat1 == "boxplot"){
+
+              fun <-  glue::glue('listP[[FEAT[i]]] <- ggplot(DF1ok, aes(x = {fact3ok}, y = value, fill = {fact3ok})) + 
+            geom_boxplot(fill = "#99AFE3") + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(FEAT[i]) +
+            theme(legend.position = "None", axis.text.x = element_text(size=rel(input$sizexlab), angle = 45, hjust=1))  + 
+            labs(fill="")')
+              eval(parse(text=fun))     
+
+            if(length(DF2$newfact) == length(unique(DF2$newfact)) & input$labvalue1){
+              listP[[FEAT[i]]] <- listP[[FEAT[i]]] + geom_text(data=DF2, aes(x = .data[["newfact"]], 
+              y = 0.03 * max(DF1[,"value"][1], na.rm = TRUE) , label= .data[["value"]]), # DF2[,"value"]
+              col='black', size=3, angle=45) + theme_bw() +
+              theme(legend.position = "None", axis.text.x = element_text(size=rel(input$sizexlab), angle = 45, hjust=1))
+            }
+
+              if(input$outlier_labs){
+                listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
+                                  ggrepel::geom_text_repel(aes(label = outlier), na.rm = TRUE, show.legend = F, 
+                                  direction = "both",
+                                  nudge_x = 0.1,
+                                  size= 3
+                                 )
+              }
+
+              if(!input$grey_mode){
+                listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
+                                  geom_boxplot(fill = "grey")
+              }else{
+                listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
+                                  geom_boxplot()            
+              }
+
+            } else if(input$outformat1 == "barplot"){
+                DF1ok$value[is.na(DF1ok$value)] <- 0 #replace NA to 0 to keep filled colors when missing data.
+                # col1 <- input$feat1
+                listP[[FEAT[i]]] <- ggplot(DF1ok, mapping = aes(x = .data[["sample.id"]], 
+                  y = .data[["value"]], 
+                  fill = .data[["newfact"]], order = .data[["newfact"]])) + 
+                  geom_bar(stat = "identity") +
+                  theme_bw() +
+                  theme(legend.title = element_blank(), axis.text.x = element_text(angle = 45, hjust=1))
+
+                if(length(DF2$newfact) == length(unique(DF2$newfact))){
+                  listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
+                  theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1))
+                }
+
+                if(input$labvalue1){
+                  listP[[FEAT[i]]] <- listP[[FEAT[i]]] + geom_text(data=DF2, aes(x = .data[["sample.id"]], 
+                  y = 0.03 * max(DF1[,"value"], na.rm = TRUE) , label= .data[["value"]]), # DF2[,"value"]
+                  col='black', size=3, angle=45)
+                }
+            }
             
-            fun <-  glue::glue('listP[[FEAT[i]]] <- ggplot(DF1ok, aes(x = {fact3ok}, y = value, fill = {fact3ok})) + 
-          geom_boxplot(fill = "#99AFE3") + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(FEAT[i]) +
-          theme(legend.position = "None", axis.text.x = element_text(size=rel(input$sizexlab), angle = 45, hjust=1))  + 
-          labs(fill="")')
-            eval(parse(text=fun))
-
-          if(length(DF2$newfact) == length(unique(DF2$newfact)) & input$labvalue1){
-            listP[[FEAT[i]]] <- listP[[FEAT[i]]] + geom_text(data=DF2, aes(x = .data[["newfact"]], 
-            y = 0.03 * max(DF1[,"value"][1], na.rm = TRUE) , label= .data[["value"]]), # DF2[,"value"]
-            col='black', size=3, angle=45) + theme_bw() +
-            theme(legend.position = "None", axis.text.x = element_text(size=rel(input$sizexlab), angle = 45, hjust=1))
-          }
-
-            if(input$outlier_labs){
-              listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
-                                ggrepel::geom_text_repel(aes(label = outlier), na.rm = TRUE, show.legend = F, 
-                                direction = "both",
-                                nudge_x = 0.1,
-                                size= 3
-                               )
-            }
-
-            if(!input$grey_mode){
-              listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
-                                geom_boxplot(fill = "grey")
-            }else{
-              listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
-                                geom_boxplot()            
-            }
 
             #   print("WRITE PLOTS")
             # if(input$pngs_out){
@@ -593,92 +631,90 @@ mod_boxplots_server <- function(id, r = r, session = session){
     })
     
 
-    pdfall_ggstat <- reactive({
-      cat(file=stderr(), 'ALL BOXPLOT ggstat', "\n")
-      req(r_values$tabF_melt2, r_values$fact3ok)
+    # pdfall_ggstat <- reactive({
+    #   cat(file=stderr(), 'ALL BOXPLOT ggstat', "\n")
+    #   req(r_values$tabF_melt2, r_values$fact3ok)
 
-        fact3ok <- r_values$fact3ok
-        if(input$outtype == "all"){
-          tabF_melt2 <- r_values$tabF_melt2
-        }else{
-          tabF_melt2 <- r_values$tabF_melt2[ grep(paste("__", input$outtype, "__", sep = ""), r_values$tabF_melt2$features) ,] %>%
-            droplevels()    
-        }
+    #     fact3ok <- r_values$fact3ok
+    #     if(input$outtype == "all"){
+    #       tabF_melt2 <- r_values$tabF_melt2
+    #     }else{
+    #       tabF_melt2 <- r_values$tabF_melt2[ grep(paste("__", input$outtype, "__", sep = ""), r_values$tabF_melt2$features) ,] %>%
+    #         droplevels()    
+    #     }
 
-        tabF_melt2$sample.id <- as.character(tabF_melt2$sample.id)
-        listP <- list()
-        r_values$FEAT <- FEAT <- levels(tabF_melt2$features)
+    #     tabF_melt2$sample.id <- as.character(tabF_melt2$sample.id)
+    #     listP <- list()
+    #     r_values$FEAT <- FEAT <- levels(tabF_melt2$features)
 
-        if(length(FEAT) > 200){
-            showNotification("More than 200 features to plot ...", type="warning", duration = 5)
-        }
+    #     if(length(FEAT) > 200){
+    #         showNotification("More than 200 features to plot ...", type="warning", duration = 5)
+    #     }
 
-        print(head(FEAT))
+    #     print(head(FEAT))
 
-        withProgress({
+    #     withProgress({
 
-          for(i in 1:length(FEAT)){ #i = 1
-            incProgress(1/length(FEAT))
-            tt <- stringr::str_split(FEAT[i], "__")
-            if(input$custom_ytitle == "None"){
-              print(tt)
-              ytitle <- sapply(tt,"[[",2)
-              print(ytitle)
-              if(r$wgt1() != "Raw"){
-                ytitle <- glue::glue("{ytitle}, weight: {r$wgt1()}")
-              }
-              if(r$norm1() != "Raw"){
-                ytitle <- glue::glue("{ytitle}, norm.: {r$norm1()}")
-              }
+    #       for(i in 1:length(FEAT)){ #i = 1
+    #         incProgress(1/length(FEAT))
+    #         tt <- stringr::str_split(FEAT[i], "__")
+    #         if(input$custom_ytitle == "None"){
+    #           print(tt)
+    #           ytitle <- sapply(tt,"[[",2)
+    #           print(ytitle)
+    #           if(r$wgt1() != "Raw"){
+    #             ytitle <- glue::glue("{ytitle}, weight: {r$wgt1()}")
+    #           }
+    #           if(r$norm1() != "Raw"){
+    #             ytitle <- glue::glue("{ytitle}, norm.: {r$norm1()}")
+    #           }
 
-            }else{
-              ytitle <- input$custom_ytitle
-            }
+    #         }else{
+    #           ytitle <- input$custom_ytitle
+    #         }
             
-            fun <-  glue::glue('tabfeat0 = tabF_melt2[tabF_melt2$features == FEAT[i],] %>% 
-                    group_by({fact3ok}) %>% 
-                    mutate(outlier=ifelse(is_outlier(value), sample.id, NA))')
-            eval(parse(text=fun))
+    #         fun <-  glue::glue('tabfeat0 = tabF_melt2[tabF_melt2$features == FEAT[i],] %>% 
+    #                 group_by({fact3ok}) %>% 
+    #                 mutate(outlier=ifelse(is_outlier(value), sample.id, NA))')
+    #         eval(parse(text=fun))
 
-            fun <- glue::glue("
-                tabfeat <- tabfeat0 %>%
-                  dplyr::filter({r_values$fact3ok} %in% input$sorted1) %>%
-                  droplevels() %>%
-                  mutate({r_values$fact3ok} = factor({r_values$fact3ok}, levels = input$sorted1))
-              ")
-            eval(parse(text=fun))
+    #         fun <- glue::glue("
+    #             tabfeat <- tabfeat0 %>%
+    #               dplyr::filter({r_values$fact3ok} %in% input$sorted1) %>%
+    #               droplevels() %>%
+    #               mutate({r_values$fact3ok} = factor({r_values$fact3ok}, levels = input$sorted1))
+    #           ")
+    #         eval(parse(text=fun))
 
-             if(!input$plotall){
-                tabfeat <- tabfeat %>% filter(!is.na(value))
-              }
+    #          if(!input$plotall){
+    #             tabfeat <- tabfeat %>% filter(!is.na(value))
+    #           }
 
-            if(nrow(tabfeat) == 0){print("no data"); next}
+    #         if(nrow(tabfeat) == 0){print("no data"); next}
             
-              fun <-  glue::glue('
-          listP[[FEAT[i]]] <- ggbetweenstats(tabfeat, {r_values$fact3ok}, value, type = "nonparametric", 
-              p.adjust.method = "fdr", pairwise.display = "significant", xlab = "", ylab = ytitle,
-              outlier.tagging = TRUE, outlier.label = "sample.id", title = FEAT[i], results.subtitle = FALSE)')
+    #           fun <-  glue::glue('
+    #       listP[[FEAT[i]]] <- ggbetweenstats(tabfeat, {r_values$fact3ok}, value, type = "nonparametric", 
+    #           p.adjust.method = "fdr", pairwise.display = "significant", xlab = "", ylab = ytitle,
+    #           outlier.tagging = TRUE, outlier.label = "sample.id", title = FEAT[i], results.subtitle = FALSE)')
+    #         eval(parse(text=fun))
 
+    #         # print("WRITE PLOTS")
+    #         # dir.create(paste(tmpdir, "/figures_ggstat/", sep = ""), recursive = TRUE)
+    #         # print(paste(tmpdir, "/figures_ggstat/", sep = ""))
 
-            eval(parse(text=fun))
+    #         # if(input$pngs_out){
+    #         #   ggsave(glue::glue("{tmpdir}/figures_ggstat/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
+    #         #   tar(glue::glue("{tmpdir}/figures_ggstat.tar"), files = glue::glue("{tmpdir}/figures_ggstat") )
+    #         # }
 
-            # print("WRITE PLOTS")
-            # dir.create(paste(tmpdir, "/figures_ggstat/", sep = ""), recursive = TRUE)
-            # print(paste(tmpdir, "/figures_ggstat/", sep = ""))
+    #         print(length(listP))
+    #       }
 
-            # if(input$pngs_out){
-            #   ggsave(glue::glue("{tmpdir}/figures_ggstat/boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
-            #   tar(glue::glue("{tmpdir}/figures_ggstat.tar"), files = glue::glue("{tmpdir}/figures_ggstat") )
-            # }
-
-            print(length(listP))
-          }
-
-        }, value = 0 ,message = "Processing boxplots ... please wait.")
-      print(length(listP))
+    #     }, value = 0 ,message = "Processing boxplots ... please wait.")
+    #   print(length(listP))
       
-      listP
-    })
+    #   listP
+    # })
 
 
     output$downloadTAR <- downloadHandler(
@@ -688,7 +724,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
         print("WRITE PLOTS")
         print(glue::glue("{tmpdir}/figures_pngs/"))
 
-        if(input$ggstatOUT){
+        if(input$outformat1 == "boxplot_stats"){
           req(pdfall_ggstat())
           listP <- pdfall_ggstat()
           print(names(listP))
@@ -722,10 +758,10 @@ mod_boxplots_server <- function(id, r = r, session = session){
       filename = glue::glue("{input$outtype}_figures_{systim}.pdf"),
       content = function(file) {
         print('DOWNLOAD ALL')
-        if(input$ggstatOUT){
+        if(input$outformat1 == "boxplot_stats"){
           print("ggstat")
-          req(pdfall_ggstat())
-          p <- pdfall_ggstat()
+          req(pdfall())
+          p <- pdfall()
           withProgress({
             ml <- marrangeGrob(p, nrow=1, ncol=1)
             ggsave(file, ml, units = "cm", width = 20, height = 15, dpi = 300)
@@ -767,6 +803,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
         tagList(
             downloadButton(outputId = ns("boxplots_download"), label = "Download PDF (long process)"),
             downloadButton(outputId = ns("downloadTAR"), label = "Download PNGs (long process)")
+
         )
       })
     
