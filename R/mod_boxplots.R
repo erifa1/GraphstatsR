@@ -58,10 +58,11 @@ mod_boxplots_ui <- function(id){
                 column(
                   h3("General settings"),
                   textInput(ns("custom_ytitle"), "Custom y title", "None"),
-                  materialSwitch(ns("ggplotstats1"), label = "Display ggstatsplot", value = TRUE, status = "primary"),
+                  materialSwitch(ns("ggplotstats1"), label = "Display ggstatsplot", value = FALSE, status = "primary"),
                   materialSwitch(ns("plotall"), label = "Plot all conditions (even NAs)", value = TRUE, status = "primary"),
                   materialSwitch(ns("grey_mode"), label = "Colored boxplot", value = TRUE, status = "primary"),
-                  checkboxInput(ns("barplot_samples"), label = "Display barplot per samples."),
+                  materialSwitch(ns("labvalue1"), label = "Label values on plots", value = TRUE, status = "primary"),
+                  # checkboxInput(ns("barplot_samples"), label = "Display barplot per samples."),
                   width = 6
                   ),
                 column(
@@ -107,7 +108,8 @@ mod_boxplots_ui <- function(id){
       fluidRow(
         box(width = 12, 
             title = 'Boxplot:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
-            plotlyOutput(ns("boxplotly1"), height = "500")
+            # plotlyOutput(ns("boxplotly1"), height = "500")
+            plotOutput(ns("boxplot_out1"), height = "500")
         )
       ),
       fluidRow(
@@ -190,14 +192,13 @@ mod_boxplots_server <- function(id, r = r, session = session){
       req(r_values$subsetds_final_melt, input$fact3, r$ds1())
       r_values$tabF_melt2 <- tabF_melt2 <- tabF_melt <- r_values$subsetds_final_melt
       if(length(input$fact3) == 1){r_values$fact3ok <- fact3ok <- input$fact3
-          fun = glue::glue('tabF_melt2 <- tabF_melt %>% dplyr::mutate(newfact = {input$fact3}, .after= "sample.id")')
+          fun = glue::glue('r_values$tabF_melt2 <- tabF_melt2 <- tabF_melt %>% dplyr::mutate(newfact = {input$fact3}, .after= "sample.id")')
           eval(parse(text=fun))
         }else{
           comb = glue::glue_collapse(input$fact3, sep = ', \"_\",')
-          fun = glue::glue('tabF_melt2 <- tabF_melt %>% dplyr::mutate(newfact = paste0({comb}), .after= "sample.id")')
+          fun = glue::glue('r_values$tabF_melt2 <- tabF_melt2 <- tabF_melt %>% dplyr::mutate(newfact = paste0({comb}), .after= "sample.id")')
           eval(parse(text=fun))
           r_values$fact3ok <- fact3ok <- "newfact"
-          r_values$tabF_melt2 <- tabF_melt2
         }
       # print(head(r_values$tabF_melt2))
       # print(r_values$fact3ok)
@@ -212,6 +213,8 @@ mod_boxplots_server <- function(id, r = r, session = session){
         tabfeat <- tabfeat %>% filter(!is.na(value))
       }
 
+      # save(list = ls(all.names = TRUE), file = "~/Bureau/tmp_debug_boxtab.rdata", 
+      # envir = environment()); print("SAVE0")
       tabfeat
     })
 
@@ -275,61 +278,18 @@ mod_boxplots_server <- function(id, r = r, session = session){
         ytitle <- input$custom_ytitle
       }
       fun <- glue::glue("
-          tabfeat_barplot <- tabfeat <- tabfeat0 %>%
+          tabfeat <- tabfeat0 %>%
             dplyr::filter({r_values$fact3ok} %in% input$sorted1) %>%
             droplevels() %>%
             mutate({r_values$fact3ok} = factor({r_values$fact3ok}, levels = input$sorted1))
         ")
       eval(parse(text=fun))
 
-      tabfeat$value[tabfeat$value == -888 | tabfeat$value == -999] <- NA  # LLOQ / ULOQ values
-
+      # Gestion des LLOQ (-888) ULOQ (-999)
+      # tabfeat$value[tabfeat$value == -888 | tabfeat$value == -999] <- NA  # LLOQ / ULOQ values
       # tabfeat[[r_values$fact3ok]] <- factor(tabfeat[[r_values$fact3ok]], levels = input$sorted1)
       
-      cat(file=stderr(), 'Factor', "\n")
-      print(tabfeat[[r_values$fact3ok]])
-     fun <-  glue::glue('r_values$boxplot1 <- p <- ggplot(tabfeat, aes(x = {r_values$fact3ok}, y = value, fill = {r_values$fact3ok})) + 
-        theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(input$feat1) +
-        theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1)) + 
-        labs(fill="")')
-      eval(parse(text=fun))
-
-      if(!input$grey_mode){
-        p <- p + 
-            geom_boxplot(fill = "grey")
-
-        r_values$ggly <- ggly <- ggplotly(p)
-        # # Hoverinfo works only in grey mode 
-        tabfeat$sample.id <- as.character(tabfeat$sample.id)
-        hoverinfo <- with(tabfeat, paste0("sample: ", sample.id, "</br></br>", 
-                                        "value: ", value))
-        ggly$x$data[[1]]$text <- hoverinfo
-        ggly$x$data[[1]]$hoverinfo <- c("text", "boxes")
-        ######
-      }else{
-        p <- p + 
-            geom_boxplot()            
-      r_values$ggly <- ggly <- ggplotly(p)
-      }
-
-      if(input$ggplotstats1 & max(table(tabfeat[[r_values$fact3ok]])) != 1){
-        fun <-  glue::glue('
-          ggstats <- ggbetweenstats(tabfeat, {r_values$fact3ok}, value, type = "nonparametric", 
-              p.adjust.method = "fdr", pairwise.display = "significant", xlab = "", ylab = ytitle,
-              outlier.tagging = TRUE, outlier.label = "sample.id", results.subtitle = FALSE, title = input$feat1)
-              ')
-        eval(parse(text=fun))
-        r_values$ggstats <- ggstats
-        outlist$ggstats <- ggstats
-      }
-
-      cat(file=stderr(), 'BOXPLOT done', "\n")
-      
-
-
-      cat(file=stderr(), 'BARPLOT start', "\n")
-
-      tabmelt <- tabfeat_barplot %>% ungroup()
+      tabmelt <- tabfeat %>% ungroup()
       DF2 <- DF1 <- tabmelt[tabmelt$features == input$feat1, ]
 
       feat1 <- input$feat1
@@ -345,27 +305,86 @@ mod_boxplots_server <- function(id, r = r, session = session){
       mutate(newfact=forcats::fct_relevel(newfact, input$sorted1 ))
 
       print("BARPLOT3 levels")
-      DF1ok <- DF1ok0 %>% mutate(sample.id = forcats::fct_relevel(sample.id, as.character(DF1ok0$sample.id) )) 
-
-      DF2$sample.id <- forcats::fct_relevel(DF2$sample.id, levels = DF2$sample.id)
+      # Keep order in samples 
+      DF1ok <- DF1ok0 %>% mutate(sample.id = forcats::fct_relevel(sample.id, 
+        as.character(DF1ok0$sample.id) )) 
+      DF2 <- DF2 %>% mutate(sample.id = forcats::fct_relevel(sample.id, 
+        levels = as.character(DF2$sample.id)))
 
       print("BARPLOT3 replace lloq")
       DF2$value[DF2$value == -999] <- ">ULOQ"
       DF2$value[DF2$value == -888] <- "<LLOQ"
       DF2$value <- as.character(DF2$value)
 
-      DF1ok$value[is.na(DF1ok$value)] <- 0 #replace NA to 0 to keep filled colors when missing data.
+      
+      cat(file=stderr(), 'Factor', "\n")
+      print(tabfeat[[r_values$fact3ok]])
+     fun <-  glue::glue('r_values$boxplot1 <- p <- ggplot(DF1ok, aes(x = {r_values$fact3ok}, y = value, fill = {r_values$fact3ok})) + 
+        theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(input$feat1) +
+        theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1)) + 
+        labs(fill="")')
+      eval(parse(text=fun))
+
+      if(length(DF2$newfact) == length(unique(DF2$newfact)) & input$labvalue1){
+        r_values$boxplot1 <- p <- p + geom_text(data=DF2, aes(x = .data[["newfact"]], 
+        y = 0.03 * max(DF1[,"value"][1], na.rm = TRUE) , label= .data[["value"]]), # DF2[,"value"]
+        col='black', size=3, angle=45) + 
+        theme_bw()
+      }
+
+      if(!input$grey_mode){
+        p <- p + 
+            geom_boxplot(fill = "grey")
+
+        r_values$ggly <- ggly <- ggplotly(p)
+        # # Hoverinfo works only in grey mode 
+        DF1ok$sample.id <- as.character(DF1ok$sample.id)
+        hoverinfo <- with(DF1ok, paste0("sample: ", sample.id, "</br></br>", 
+                                        "value: ", value))
+        ggly$x$data[[1]]$text <- hoverinfo
+        ggly$x$data[[1]]$hoverinfo <- c("text", "boxes")
+        ######
+      }else{
+        p <- p + 
+            geom_boxplot()            
+      r_values$ggly <- ggly <- ggplotly(p)
+      }
+
+      if(input$ggplotstats1 & max(table(DF1ok[[r_values$fact3ok]])) != 1){
+        fun <-  glue::glue('
+          ggstats <- ggbetweenstats(DF1ok, {r_values$fact3ok}, value, type = "nonparametric", 
+              p.adjust.method = "fdr", pairwise.display = "significant", xlab = "", ylab = ytitle,
+              outlier.tagging = TRUE, outlier.label = "sample.id", results.subtitle = FALSE, title = input$feat1)
+              ')
+        eval(parse(text=fun))
+        r_values$ggstats <- ggstats
+        outlist$ggstats <- ggstats
+      }
+
+      cat(file=stderr(), 'BOXPLOT done', "\n")
+      
+
+
+      cat(file=stderr(), 'BARPLOT start', "\n")
+
+
 
       print("Generate BARPLOT")
+
+      DF1ok$value[is.na(DF1ok$value)] <- 0 #replace NA to 0 to keep filled colors when missing data.
       # col1 <- input$feat1
       r_values$barplot1 <- p_barplot <- ggplot(DF1ok, mapping = aes(x = .data[["sample.id"]], 
         y = .data[["value"]], 
         fill = .data[["newfact"]], order = .data[["newfact"]])) + 
-        geom_bar(stat = "identity") + 
-        geom_text(data=DF2, aes(x = .data[["sample.id"]], 
-          y = 0.03 * max(DF1[,"value"], na.rm = TRUE) , label= .data[["value"]]), # DF2[,"value"]
-          col='black', size=3, angle=45) + 
-        theme_bw()
+        geom_bar(stat = "identity") +
+        theme_bw() +
+        theme(legend.title = element_blank(), axis.text.x = element_text(angle = 45, hjust=1))
+
+      if(input$labvalue1){
+        r_values$barplot1 <- p_barplot <- p_barplot + geom_text(data=DF2, aes(x = .data[["sample.id"]], 
+        y = 0.03 * max(DF1[,"value"], na.rm = TRUE) , label= .data[["value"]]), # DF2[,"value"]
+        col='black', size=3, angle=45)
+      }
 
 
       cat(file=stderr(), 'BARPLOT done', "\n")
@@ -401,6 +420,15 @@ mod_boxplots_server <- function(id, r = r, session = session){
       if(!is.null(r_values$ggly)){
         bp1 <- boxplot1()
         ggplotly(bp1$ggly)
+      }
+    })
+
+    output$boxplot_out1 <- renderPlot({
+      # req(boxplot1())
+      req(input$go3)
+      if(!is.null(r_values$boxplot1)){
+        bp1 <- boxplot1()
+        bp1$p
       }
     })
 
@@ -450,6 +478,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
           for(i in 1:length(FEAT)){
             incProgress(1/length(FEAT))
             tt <- stringr::str_split(FEAT[i], "__")
+            print(tt)
             if(input$custom_ytitle == "None"){
               print(tt)
               ytitle <- sapply(tt,"[[",2)
@@ -478,17 +507,54 @@ mod_boxplots_server <- function(id, r = r, session = session){
               ")
             eval(parse(text=fun))
 
+            # Gestion des LLOQ (-888) ULOQ (-999)
+            tabmelt <- DF2 <- DF1 <- tabfeat %>% ungroup()
+            # DF2 <- DF1 <- tabmelt[tabmelt$features == input$feat1, ]
+
+            feat1 <- input$feat1
+            sorted1 <- input$sorted1
+            stashed1 <- input$stashed1
+
+            #input$sorted1 <- sample(unique(DF1ok$newfact))
+            print("BARPLOT2")
+            DF1ok0 <- DF1 %>% mutate(across(where(is.numeric), ~na_if(., -999))) %>% 
+            mutate(across(where(is.numeric), ~na_if(., -888))) %>%
+            mutate_if(is.character,as.factor) %>% 
+            arrange(match(newfact, input$sorted1), value) %>%  # 
+            mutate(newfact=forcats::fct_relevel(newfact, input$sorted1 ))
+
+            print("BARPLOT3 levels")
+            # Keep order in samples 
+            DF1ok <- DF1ok0 %>% mutate(sample.id = forcats::fct_relevel(sample.id, 
+              as.character(DF1ok0$sample.id) )) 
+            DF2 <- DF2 %>% mutate(sample.id = forcats::fct_relevel(sample.id, 
+              levels = as.character(DF2$sample.id)))
+
+            print("BARPLOT3 replace lloq")
+            DF2$value[DF2$value == -999] <- ">ULOQ"
+            DF2$value[DF2$value == -888] <- "<LLOQ"
+            DF2$value <- as.character(DF2$value)
+
+
+
              if(!input$plotall){
-                tabfeat <- tabfeat %>% filter(!is.na(value))
+                DF1ok <- DF1ok %>% filter(!is.na(value))
               }
 
-            if(nrow(tabfeat) == 0){print("no data"); next}
+            if(nrow(DF1ok) == 0){print("no data"); next}
             
-            fun <-  glue::glue('listP[[FEAT[i]]] <- ggplot(tabfeat, aes(x = {fact3ok}, y = value, fill = {fact3ok})) + 
+            fun <-  glue::glue('listP[[FEAT[i]]] <- ggplot(DF1ok, aes(x = {fact3ok}, y = value, fill = {fact3ok})) + 
           geom_boxplot(fill = "#99AFE3") + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(FEAT[i]) +
           theme(legend.position = "None", axis.text.x = element_text(size=rel(input$sizexlab), angle = 45, hjust=1))  + 
           labs(fill="")')
             eval(parse(text=fun))
+
+          if(length(DF2$newfact) == length(unique(DF2$newfact)) & input$labvalue1){
+            listP[[FEAT[i]]] <- listP[[FEAT[i]]] + geom_text(data=DF2, aes(x = .data[["newfact"]], 
+            y = 0.03 * max(DF1[,"value"][1], na.rm = TRUE) , label= .data[["value"]]), # DF2[,"value"]
+            col='black', size=3, angle=45) + theme_bw() +
+            theme(legend.position = "None", axis.text.x = element_text(size=rel(input$sizexlab), angle = 45, hjust=1))
+          }
 
             if(input$outlier_labs){
               listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
