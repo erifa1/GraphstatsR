@@ -328,8 +328,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
       if(length(DF2$newfact) == length(unique(DF2$newfact)) & input$labvalue1){
         r_values$boxplot1 <- p <- p + geom_text(data=DF2, aes(x = .data[["newfact"]], 
         y = 0.03 * max(DF1[,"value"][1], na.rm = TRUE) , label= .data[["value"]]), # DF2[,"value"]
-        col='black', size=3, angle=45) + 
-        theme_bw()
+        col='black', size=3, angle=45) 
       }
 
       if(!input$grey_mode){
@@ -379,6 +378,11 @@ mod_boxplots_server <- function(id, r = r, session = session){
         geom_bar(stat = "identity") +
         theme_bw() +
         theme(legend.title = element_blank(), axis.text.x = element_text(angle = 45, hjust=1))
+
+      if(length(DF2$newfact) == length(unique(DF2$newfact))){
+        p_barplot <- p_barplot + 
+        theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1))
+      }
 
       if(input$labvalue1){
         r_values$barplot1 <- p_barplot <- p_barplot + geom_text(data=DF2, aes(x = .data[["sample.id"]], 
