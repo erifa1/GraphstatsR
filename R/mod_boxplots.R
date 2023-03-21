@@ -306,7 +306,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
       DF1ok0 <- DF1 %>% mutate(across(where(is.numeric), ~na_if(., -999))) %>% 
       mutate(across(where(is.numeric), ~na_if(., -888))) %>%
       mutate_if(is.character,as.factor) %>% 
-      arrange(match(newfact, input$sorted1), value) %>%  # 
+      arrange(match(newfact, input$sorted1)) %>%  # , value valeur ascendante...
       mutate(newfact=forcats::fct_relevel(newfact, input$sorted1 ))
 
       print("BARPLOT3 levels")
