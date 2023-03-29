@@ -127,8 +127,8 @@ mod_inputs_server <- function(id, r = r, session = session){
 
     ns <- session$ns
     r_values <- reactiveValues(merged = NULL, imported = NULL, imported2 = NULL, 
-      subsetds_final = NULL, metadata_final = NULL, 
-      features_final = NULL, subsetds_final_melt = NULL)
+      subsetds_final = "emptytable", metadata_final = NULL, 
+      features_final = NULL, subsetds_final_melt = "emptytable")
     imported <- NULL
 
 
@@ -470,7 +470,7 @@ mod_inputs_server <- function(id, r = r, session = session){
           # Final dataset
           Fdataset <- as.data.frame(t(normds1)) %>% 
           tibble::rownames_to_column(var = "sample.id") %>% 
-          dplyr::right_join(x = mt1, by = "sample.id")  # %>% mutate_if(is.character,as.factor)
+          dplyr::left_join(x = mt1, by = "sample.id")  # %>% mutate_if(is.character,as.factor)
           row.names(Fdataset) <- Fdataset$sample.id
           r_values$subsetds_final <- Fdataset
 

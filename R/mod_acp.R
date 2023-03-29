@@ -24,7 +24,9 @@ mod_acp_ui <- function(id){
                  "Features based" = 1
                ), selected = 0
              ),
-             actionButton(ns("go2"), "Run ACP", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
+             materialSwitch(ns("center1"), label = "zero centered values", value = TRUE, status = "primary"),
+             materialSwitch(ns("scale1"), label = "scaled values", value = TRUE, status = "primary"),
+             # actionButton(ns("go2"), "Run / update ACP", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
              verbatimTextOutput(ns("naomitval"))
          ),
          box(title = "Plot Settings:", width = 6, status = "warning", solidHeader = TRUE,
@@ -45,7 +47,8 @@ mod_acp_ui <- function(id){
                                   choices = ""))
              ),
              materialSwitch(ns("ellipse1"), label = "Plot ellipses", value = TRUE, status = "primary"),
-             actionButton(ns("go1"), "Plot ACP", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
+             actionButton(ns("go1"), "Generate / update plots", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
+             uiOutput(ns("DLbuttons"))
          )
        ),
        fluidRow(box(width = 6, 
@@ -123,7 +126,7 @@ mod_acp_server <- function(id, r = r, session = session){
 
     })
     
-    acp1 <- eventReactive(input$go2, {
+    acp1 <- eventReactive(input$go1, {
       cat(file=stderr(), 'ACP1 ... ', "\n")
 
 
@@ -182,7 +185,7 @@ mod_acp_server <- function(id, r = r, session = session){
           print(which(sds==0))
           Facp_input <- acp_input[,keepsds]
           
-        acp1 = stats::prcomp(Facp_input, scale. = TRUE)  #t(normds1()[,-1])
+        acp1 = stats::prcomp(Facp_input, scale. = input$scale1, center = input$center1)  #t(normds1()[,-1])
         r_values$acp1 <- acp1
         
         r_values$summary_acp <- summary(acp1)
@@ -209,12 +212,13 @@ mod_acp_server <- function(id, r = r, session = session){
      })
     
     # Generate ACP Table
-    acptab <- eventReactive(input$go2, {
+    acptab <- reactive( {
       req(acp1()$x, r$mt1())
       r_values$metadata_final <- r$mt1()
       cat(file=stderr(), 'ACP tab ... ', "\n")
       acptab= as.data.frame(acp1()$x) %>% tibble::rownames_to_column(var = "sample.id") %>% 
         dplyr::inner_join(x = r_values$metadata_final, by = "sample.id")
+
       acptab
 
     })
@@ -235,8 +239,12 @@ mod_acp_server <- function(id, r = r, session = session){
     
     
     ## Table var
-    acptabvar <- eventReactive(input$go2, {
+    acptabvar <- reactive( {
       req(acp1())
+      r_values$systim <- as.numeric(Sys.time())
+      dir.create(paste(tmpdir, "/ACP_", r_values$systim, "/", sep = ""), recursive = TRUE)
+      print(paste(tmpdir, "/ACP_", r_values$systim, "/", sep = ""))
+
       cat(file=stderr(), 'ACP tab var... ', "\n")
       acptabvar = factoextra::get_pca_var(acp1())$coord %>% as.data.frame() %>% tibble::rownames_to_column(var = "features") 
       acptabvar
@@ -251,12 +259,12 @@ mod_acp_server <- function(id, r = r, session = session){
       filename = "acpvar_table.csv",
       content = function(file) {
         req(acptabvar())
-        write.table(acptabvar(), file, sep="\t", row.names=FALSE)
+        write.table(acptabvar(), file, sep=",", row.names=FALSE)
       }
     )
     
     # Acp PLOT
-    acpplot <- eventReactive(input$go1, {
+    acpplot <- reactive( {
       req(input$fact3, acptab(), input$pc1, input$pc2)
     # acpplot <- reactive({
       cat(file=stderr(), 'ACP plot', "\n")
@@ -305,7 +313,7 @@ mod_acp_server <- function(id, r = r, session = session){
     )
     
     
-    acpplotvar <- eventReactive(input$go1, {
+    acpplotvar <- reactive({
       req(acp1(), input$pc1, input$pc2)
       pc1 = as.numeric(substring(input$pc1, 3, 10))
       pc2 = as.numeric(substring(input$pc2, 3, 10))
@@ -329,6 +337,39 @@ mod_acp_server <- function(id, r = r, session = session){
       }
     )
 
+
+    output$downloadTAR_ACP <- downloadHandler(
+      filename <- glue::glue("{tmpdir}/ACP_files.tar"), 
+
+      content <- function(file) {
+        print("WRITE ACP")
+        print(paste(tmpdir, "/ACP_", r_values$systim, "/", sep = ""))
+
+        req(acpplotvar())
+        p <- acpplotvar()
+        ggsave(glue::glue("{tmpdir}/ACP_{r_values$systim}/ACPplot_var.png"), p, units = "cm", width = 15, height = 15, dpi = 300)
+
+        saveWidget(acpplot(), file= glue::glue("{tmpdir}/ACP_{r_values$systim}/ACPplot_indiv.html"))
+        unlink(glue::glue("{tmpdir}/ACP_{r_values$systim}/ACPplot_indiv_files"), recursive = TRUE)
+
+
+        write.table(acptabvar(), glue::glue("{tmpdir}/ACP_{r_values$systim}/ACPtab_var.csv"), sep=",", row.names=FALSE)
+
+        write.table(r_values$acptab1, glue::glue("{tmpdir}/ACP_{r_values$systim}/ACPtab_indiv.csv"), sep=",", row.names=FALSE)
+
+        tar(glue::glue("{tmpdir}/ACP_files.tar"), files = glue::glue("{tmpdir}/ACP_{r_values$systim}") )
+
+        file.copy(filename, file)
+      },
+      contentType = "application/tar"
+    )
+
+    output$DLbuttons <- renderUI({
+      req(input$go1)
+      tagList(
+          downloadButton(outputId = ns("downloadTAR_ACP"), label = "Download all ACP files")
+      )
+    })
 
 
  
