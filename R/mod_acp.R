@@ -89,7 +89,7 @@ mod_acp_server <- function(id, r = r, session = session){
     r_values <- reactiveValues()
 
     observeEvent(r$tabs$tabselected, {
-      if(r$tabs$tabselected=='acp-tab' && r$fdata() == "emptytable") { # && is.null(r$fdata) )
+      if(r$tabs$tabselected=='acp-tab' & is.character(r$fdata())) {
         print("alert")
         shinyalert::shinyalert(title = "Oops", text="Final table not available, check all steps.", type='error')          
       }
