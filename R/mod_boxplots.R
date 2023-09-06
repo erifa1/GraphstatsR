@@ -151,7 +151,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
     ###BOXPLOT
     
     observeEvent(r$tabs$tabselected, {
-      if(r$tabs$tabselected=='boxplot-tab' && r$fdata_melt() == "emptytable"){ #r_values$features_final
+      if(r$tabs$tabselected=='boxplot-tab' & is.character(r$fdata_melt())){ #r_values$features_final
         cat(file=stderr(), 'Boxplot no table... ', "\n")
         shinyalert(title = "Oops", text="Final table not available, check all steps.", type='error')
       }
