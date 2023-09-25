@@ -64,12 +64,13 @@ mod_boxplots_ui <- function(id){
                   width = 6
                   ),
                 column(
-                  h3("PDF and PNGs output settings"),
+                  h3("PDF and Images output settings"),
                   selectInput( ns("nbPicPage"), label = "Select number of plot per pdf page (max 4 per page):", choices = c(1:4), selected = 1),
-                  materialSwitch(ns("ggstatOUT"), label = "Output PDF/PNGs with ggstat plots", value = FALSE, status = "primary"),
+                  materialSwitch(ns("ggstatOUT"), label = "Output PDF/Images with ggstat plots", value = FALSE, status = "primary"),
                   materialSwitch(ns("verticaldisplay"), label = "Vertical display in pdf or not (2 per page)", value = TRUE, status = "primary"),
                   sliderInput(ns("sizexlab"), label = "X labels size", min = 0, max = 1, value = 0.8, step = 0.05),
                   materialSwitch(ns("outlier_labs"), label = "Inform outlier in pdf output", value = TRUE, status = "primary"),
+                  selectInput( ns("ImgFormat"), label = "Image format :", choices = c("jpeg", "eps", "ps", "pdf", "tiff", "png", "bmp", "svg"), selected = 1),
                   # materialSwitch(ns("pngs_out"), label = "Output png for each feature (long process)", value = FALSE, status = "primary"),
                   # textInput(ns("outpath"), "Output path for pngs", ""),
                   width = 6
@@ -582,10 +583,10 @@ mod_boxplots_server <- function(id, r = r, session = session){
           for(i in 1:length(FEAT)){
             incProgress(1/length(FEAT))
             tt <- stringr::str_split(FEAT[i], "__")
-            ggsave(glue::glue("{tmpdir}/figures_{r_values$systim}/{sapply(tt,'[[',2)}_boxplot_{sapply(tt,'[[',1)}.png"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm")
+            ggsave(glue::glue("{tmpdir}/figures_{r_values$systim}/{sapply(tt,'[[',2)}_boxplot_{sapply(tt,'[[',1)}.{input$ImgFormat}"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm", device = input$ImgFormat)
           }
 
-        }, value = 0, message = "Generating PNGs...")
+        }, value = 0, message = "Generating Images...")
 
         tar(glue::glue("{tmpdir}/figures_pngs.tar"), files = glue::glue("{tmpdir}/figures_{r_values$systim}") )
 
@@ -645,7 +646,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
         req(input$go3)
         tagList(
             downloadButton(outputId = ns("boxplots_download"), label = "Download PDF (long process)"),
-            downloadButton(outputId = ns("downloadTAR"), label = "Download PNGs (long process)")
+            downloadButton(outputId = ns("downloadTAR"), label = "Download Images (long process)")
         )
       })
     
