@@ -45,10 +45,11 @@ mod_boxplots_ui <- function(id){
               label = "Feature to plot in boxplot:",
               choices = ""
             ),
-            selectInput(
+            pickerInput(
               ns("outtype"),
               label = "Select specific type of features to download :",
-              choices = ""
+              choices = "",
+              multiple = TRUE
             ),
             dropMenu(
               actionButton("go0", "More parameters..."),
@@ -152,11 +153,13 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
       ds0 <- r$ds0()
       print(names(ds0))
-      print(head(ds0))
-      type1 <- ds0[,2]  # colonne type
-      updateSelectInput(session, "outtype",
-                        choices = c("all", type1),
-                        selected = "all")
+      print(head(ds0)[,1:10])
+      type1 <- unique(ds0[,2])  # colonne type
+      print("OBSERVE")
+      print(type1)
+      updatePickerInput(session, "outtype",
+                        choices = type1,
+                        selected = type1)
 
       if(is.data.frame(r$fdata_melt())){
         updateSelectInput(session, "feat1",
@@ -365,13 +368,13 @@ mod_boxplots_server <- function(id, r = r, session = session){
       LL <- list()
       req(r_values$tabF_melt2, r_values$fact3ok)
         fact3ok <- r_values$fact3ok
+        tabF_melt2 <- r_values$tabF_melt2
+        
+        tabF_melt2 <- tidyr::separate(tabF_melt2, features, c("feature","type","unit"), "__", remove= FALSE) %>% 
+                      mutate_if(is.character,as.factor) %>%
+                      filter(type %in% input$outtype) %>%
+                      droplevels()   
 
-        if(input$outtype == "all"){
-          tabF_melt2 <- r_values$tabF_melt2
-        }else{
-          tabF_melt2 <- r_values$tabF_melt2[ grep(paste("__", input$outtype, "__", sep = ""), r_values$tabF_melt2$features) ,] %>%
-            droplevels()    
-        }
         tabF_melt2$sample.id <- as.character(tabF_melt2$sample.id)
         listP <- list()
         FEAT = levels(tabF_melt2$features)
@@ -475,12 +478,11 @@ mod_boxplots_server <- function(id, r = r, session = session){
       req(r_values$tabF_melt2, r_values$fact3ok)
 
         fact3ok <- r_values$fact3ok
-        if(input$outtype == "all"){
-          tabF_melt2 <- r_values$tabF_melt2
-        }else{
-          tabF_melt2 <- r_values$tabF_melt2[ grep(paste("__", input$outtype, "__", sep = ""), r_values$tabF_melt2$features) ,] %>%
-            droplevels()    
-        }
+        tabF_melt2 <- r_values$tabF_melt2
+        tabF_melt2 <- tidyr::separate(tabF_melt2, features, c("feature","type","unit"), "__", remove= FALSE) %>% 
+                      mutate_if(is.character,as.factor) %>%
+                      filter(type %in% input$outtype) %>%
+                      droplevels()
 
         tabF_melt2$sample.id <- as.character(tabF_melt2$sample.id)
         listP <- list()
