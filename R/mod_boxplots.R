@@ -10,6 +10,7 @@
 #' @importFrom sortable rank_list bucket_list add_rank_list sortable_options
 #' @importFrom ggstatsplot ggbetweenstats
 #' @importFrom car Boxplot
+#' @importFrom waiter useWaiter waiter_show waiter_hide spin_fading_circles
 #' @import PMCMRplus
 
 tmpdir <- tempdir()
@@ -32,6 +33,7 @@ mod_boxplots_ui <- function(id){
   ns <- NS(id)
   tagList(
     fluidPage(
+      useWaiter(),
 
       fluidRow(
         box(title = "Plot Settings:", width = 7, status = "warning", solidHeader = TRUE,
@@ -254,6 +256,10 @@ mod_boxplots_server <- function(id, r = r, session = session){
     boxplot1 <- eventReactive(c(input$go4, input$go3), {  #
       outlist = list()
       showNotification("Processing ...", type="message", duration = 5)
+      
+      # waiter_show(
+      #   html = tagList(spin_fading_circles(), h4("Processing, please wait...")) 
+      # )
 
       cat(file=stderr(), 'BOXPLOT', "\n")
       tabfeat0 <- boxtab()
@@ -336,6 +342,8 @@ mod_boxplots_server <- function(id, r = r, session = session){
       outlist$tabF_melt2 <- r_values$tabF_melt2
       outlist$fact3ok <- r_values$fact3ok 
       outlist$ggly <- ggly
+
+      # waiter_hide()
 
       outlist
     })
@@ -835,31 +843,39 @@ mod_boxplots_server <- function(id, r = r, session = session){
       cat(file=stderr(), 'BOXPLOT summary', "\n")
       req(boxplot1())
       
-      
+      waiter_show(
+        html =  tagList(spin_fading_circles(), h4("Calculating statistics 1/2..."))
+      )
       
       q = c(.25, .5, .75)
       boxstat <- data.frame()
       #calculate quantiles by grouping variable
       Amelt <- boxplot1()$tabF_melt2
       print(head(Amelt))
-      for(i in unique(Amelt$features)){
-        boxstat1 <- Amelt[Amelt$features == i,] %>%
-          filter(!is.na(value)) %>%
-          group_by(.dots = boxplot1()$fact3ok) %>%
-          summarize(min = min(value),
-                    quant25 = quantile(value, probs = q[1]),
-                    median = quantile(value, probs = q[2]),
-                    quant75 = quantile(value, probs = q[3]),
-                    max = max(value),
-                    mean = mean(value),
-                    sd = sd(value)) %>% 
-          add_column(Features = i, .after = 0) %>% mutate_if(is.character,as.factor)
-        
-        boxstat <- rbind(boxstat, boxstat1)
-      }
+      suppressWarnings({
+
+        for(i in unique(Amelt$features)){
+          boxstat1 <- Amelt[Amelt$features == i,] %>%
+            filter(!is.na(value)) %>%
+            group_by(.dots = boxplot1()$fact3ok) %>%
+            summarize(min = min(value),
+                      quant25 = quantile(value, probs = q[1]),
+                      median = quantile(value, probs = q[2]),
+                      quant75 = quantile(value, probs = q[3]),
+                      max = max(value),
+                      mean = mean(value),
+                      sd = sd(value)) %>% 
+            add_column(Features = i, .after = 0) %>% mutate_if(is.character,as.factor)
+          
+          boxstat <- rbind(boxstat, boxstat1)
+        }
+
+      })
+
       cat(file=stderr(), 'BOXPLOT summary done', "\n")
       print(head(boxstat))
       
+      waiter_hide()
       as.data.frame(boxstat)
     })
     
@@ -880,6 +896,11 @@ mod_boxplots_server <- function(id, r = r, session = session){
     wilcoxBP <- eventReactive(input$go3, {
       cat(file=stderr(), 'wilcoxBP table', "\n")
       req(boxplot1(), boxtab())
+
+      waiter_show(
+        html = tagList(spin_fading_circles(), h4("Calculating statistics 2/2..."))
+      )
+
       Amelt <- boxplot1()$tabF_melt2
       if(max(table(boxtab()[, boxplot1()$fact3ok])) == 1){
         return(NULL)
@@ -893,9 +914,12 @@ mod_boxplots_server <- function(id, r = r, session = session){
         if(length(which(table(Ftabtest[Ftabtest$features == feat1,boxplot1()$fact3ok]) >= 3)) < 2){next} # si moins de 2 groupes avec au moins 3 repetitions next.
         # print(feat1)
         # print(table(Ftabtest[Ftabtest$features == feat1,boxplot1()$fact3ok]))
+        
+        suppressWarnings({
         wcoxtab = pairwise.wilcox.test(Ftabtest[Ftabtest$features == feat1,"value"], as.factor(Ftabtest[,boxplot1()$fact3ok]),
                                        p.adjust.method = "none")
-        
+        })
+
         ftable1 <- as.data.frame(wcoxtab$p.value) %>%
           rownames_to_column() %>% pivot_longer(!rowname, names_to = "condition", values_to = "pvalue") %>%
           na.omit() %>% add_column(Features = feat1, .after = 0)
@@ -908,6 +932,8 @@ mod_boxplots_server <- function(id, r = r, session = session){
       print(dim(Fpvaltable))
       cat(file=stderr(), 'wilcoxBP table done', "\n")
       
+      waiter_hide()
+
       Fpvaltable
     })
     
