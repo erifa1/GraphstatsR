@@ -9,6 +9,7 @@
 #' @importFrom shiny NS tagList 
 #' @importFrom sortable rank_list bucket_list add_rank_list sortable_options
 #' @importFrom ggstatsplot ggbetweenstats
+#' @importFrom car Boxplot
 #' @import PMCMRplus
 
 tmpdir <- tempdir()
@@ -644,11 +645,187 @@ mod_boxplots_server <- function(id, r = r, session = session){
     )
 
 
+    output$pdf_rbase <- downloadHandler(
+      filename = glue::glue("{input$outtype}_figuresRbase_{systim}.pdf"),
+      content = function(file) {
+        req(r_values$tabF_melt2,r_values$fact3ok)
+        tabF_melt2 <- r_values$tabF_melt2
+
+        # print(unique(tabF_melt2[r_values$fact3ok]))
+        # print(input$sorted1)
+          if(!any(unique(tabF_melt2[r_values$fact3ok]) %in% input$sorted1)){
+            # validate("Run plot/stats & tests again.")
+            print("Run plot/stats & tests again.")
+          }
+
+        pdf(file)
+        for(i in 1:length(levels(tabF_melt2$features))){
+
+          if(input$nbPicPage == 4){
+            if((i %% 4) == 1) {par(mfrow= c(2,2), mar=c(4,4,2,0.5))}
+          }else if(input$nbPicPage == 3){
+            if((i %% 3) == 1) {
+              if(input$verticaldisplay){
+                par(mfrow= c(1,3), mar=c(4,4,2,0.5))
+              }else{
+                par(mfrow= c(3,1), mar=c(4,4,2,0.5))
+              }
+            }
+          }else if(input$nbPicPage == 2){
+            if((i %% 2) == 1) {
+              if(input$verticaldisplay){
+                par(mfrow= c(1,2), mar=c(4,4,2,0.5))
+              }else{
+                par(mfrow= c(2,1), mar=c(4,4,2,0.5))
+              }
+            }
+          }
+
+          feat1 <- levels(tabF_melt2$features)[i]
+          if(input$custom_ytitle != "None"){
+            YLAB <- input$custom_ytitle
+          }else{
+            YLAB <- stringr::str_split_1(feat1, "__")[3]
+          }
+
+
+
+            fun1 <- glue::glue('
+                tab1 <- tabF_melt2 %>% dplyr::filter(features == feat1) %>% 
+                tidyr::separate(features, c("feature","type","unit"), "__", remove= FALSE) %>%
+                dplyr::filter({r_values$fact3ok} %in% input$sorted1) %>%
+                droplevels() %>%
+                mutate({r_values$fact3ok} = factor({r_values$fact3ok}, levels = input$sorted1))
+              ')
+            eval(parse(text=fun1))
+            row.names(tab1) <- tab1$sample.id
+
+            if(all(is.na(tab1$value))){
+              plot(c(0, 1), c(0, 1), ann = F, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n')
+              text(x = 0.5, y = 0.5, glue::glue("{feat1}\nNo data"), cex = 1.6, col = "black")
+              next
+            }
+
+            if(input$outlier_labs){
+              car::Boxplot(as.formula(glue::glue("value~{r_values$fact3ok}")), data = tab1, main = feat1, 
+                  cex.main = 0.6, boxwex=.3, col = gg_color_hue(nrow(unique(tab1[r_values$fact3ok]))),
+                  cex.lab = 0.9, cex.axis = 0.5, las = 2, xlab = "", ylab = YLAB, 
+                  ylim=c(0,max(tab1$value, na.rm = TRUE)))
+            }else{
+              boxplot(as.formula(glue::glue("value~{r_values$fact3ok}")), data = tab1, main = feat1, 
+                  cex.main = 0.6, boxwex=.3, col = gg_color_hue(nrow(unique(tab1[r_values$fact3ok]))),
+                  cex.lab = 0.9, cex.axis = 0.5, las = 2, xlab = "", ylab = "area", 
+                  ylim=c(0,max(tab1$value, na.rm = TRUE)))
+            }
+
+              grid()
+        }
+        dev.off()
+
+      })
+
+    output$downloadTAR_rbase <- downloadHandler(
+      filename <- glue::glue("{tmpdir}/figures_jpgs_rbase.tar"), 
+
+      content <- function(file) {
+        print("WRITE PLOTS")
+        systim <- as.numeric(Sys.time())
+        print(glue::glue("{tmpdir}/figures_jpgs/figures_{systim}"))
+        dir.create(glue::glue("{tmpdir}/figures_jpgs/figures_{systim}"), recursive = TRUE)
+
+        req(r_values$tabF_melt2,r_values$fact3ok)
+        tabF_melt2 <- r_values$tabF_melt2
+
+        
+        for(i in 1:length(levels(tabF_melt2$features))){
+
+          if(input$nbPicPage == 4){
+            if((i %% 4) == 1) {par(mfrow= c(2,2), mar=c(4,4,2,0.5))}
+          }else if(input$nbPicPage == 3){
+            if((i %% 3) == 1) {
+              if(input$verticaldisplay){
+                par(mfrow= c(1,3), mar=c(4,4,2,0.5))
+              }else{
+                par(mfrow= c(3,1), mar=c(4,4,2,0.5))
+              }
+            }
+          }else if(input$nbPicPage == 2){
+            if((i %% 2) == 1) {
+              if(input$verticaldisplay){
+                par(mfrow= c(1,2), mar=c(4,4,2,0.5))
+              }else{
+                par(mfrow= c(2,1), mar=c(4,4,2,0.5))
+              }
+            }
+          }
+
+          feat1 <- levels(tabF_melt2$features)[i]
+          if(input$custom_ytitle != "None"){
+            YLAB <- input$custom_ytitle
+          }else{
+            YLAB <- stringr::str_split_1(feat1, "__")[3]
+          }
+
+            fun1 <- glue::glue('
+                tab1 <- tabF_melt2 %>% dplyr::filter(features == feat1) %>% 
+                tidyr::separate(features, c("feature","type","unit"), "__", remove= FALSE) %>%
+                dplyr::filter({r_values$fact3ok} %in% input$sorted1) %>%
+                droplevels() %>%
+                mutate({r_values$fact3ok} = factor({r_values$fact3ok}, levels = input$sorted1))
+              ')
+            eval(parse(text=fun1))
+            row.names(tab1) <- tab1$sample.id
+
+            if(all(is.na(tab1$value))){
+              plot(c(0, 1), c(0, 1), ann = F, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n')
+              text(x = 0.5, y = 0.5, glue::glue("{feat1}\nNo data"), cex = 1.6, col = "black")
+              next
+            }
+
+            met1 <- stringr::str_split_1(feat1, "__")[1] %>% stringr::str_replace("/", "_")
+            typ1 <- stringr::str_split_1(feat1, "__")[2] %>% stringr::str_replace("/", "_")
+            jpeg(glue::glue("{tmpdir}/figures_jpgs/figures_{systim}/bp_{met1}_{typ1}.jpeg"),
+              width = 1422, height = 800, quality = 100, res = 150)
+            if(input$outlier_labs){
+              car::Boxplot(as.formula(glue::glue("value~{r_values$fact3ok}")), data = tab1, main = feat1, 
+                  cex.main = 0.6, boxwex=.3, col = gg_color_hue(nrow(unique(tab1[r_values$fact3ok]))),
+                  cex.lab = 0.9, cex.axis = 0.5, las = 2, xlab = "", ylab = YLAB, 
+                  ylim=c(0,max(tab1$value, na.rm = TRUE)))
+            }else{
+              boxplot(as.formula(glue::glue("value~{r_values$fact3ok}")), data = tab1, main = feat1, 
+                  cex.main = 0.6, boxwex=.3, col = gg_color_hue(nrow(unique(tab1[r_values$fact3ok]))),
+                  cex.lab = 0.9, cex.axis = 0.5, las = 2, xlab = "", ylab = "area", 
+                  ylim=c(0,max(tab1$value, na.rm = TRUE)))
+            }
+
+              grid()
+            dev.off()
+        }
+
+
+        tar(filename, files = glue::glue("{tmpdir}/figures_jpgs/figures_{systim}") )
+
+
+        file.copy(filename, file)
+      },
+      contentType = "application/tar"
+    )
+
+
+
+
+
       output$DLbuttons <- renderUI({
         req(input$go3)
         tagList(
+          column(width = 6,
             downloadButton(outputId = ns("boxplots_download"), label = "Download PDF (long process)"),
             downloadButton(outputId = ns("downloadTAR"), label = "Download Images (long process)")
+            ),
+          column(width = 6,
+            downloadButton(outputId = ns("pdf_rbase"), label = "Download PDF rbase (faster)"),
+            downloadButton(outputId = ns("downloadTAR_rbase"), label = "Download JPEG rbase (faster)")
+            )
         )
       })
     
@@ -714,8 +891,8 @@ mod_boxplots_server <- function(id, r = r, session = session){
           filter(!is.na(value)) 
         if(nrow(Ftabtest)==0){next}
         if(length(which(table(Ftabtest[Ftabtest$features == feat1,boxplot1()$fact3ok]) >= 3)) < 2){next} # si moins de 2 groupes avec au moins 3 repetitions next.
-        print(feat1)
-        print(table(Ftabtest[Ftabtest$features == feat1,boxplot1()$fact3ok]))
+        # print(feat1)
+        # print(table(Ftabtest[Ftabtest$features == feat1,boxplot1()$fact3ok]))
         wcoxtab = pairwise.wilcox.test(Ftabtest[Ftabtest$features == feat1,"value"], as.factor(Ftabtest[,boxplot1()$fact3ok]),
                                        p.adjust.method = "none")
         

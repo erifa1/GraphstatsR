@@ -1,12 +1,15 @@
 Package: graphstatsr
 Title: graphstatsr
-Version: 1.8.1
+Version: 1.9.0
 Authors@R: 
     person("Etienne", "Rifa", , "etienne.rifa@insa-toulouse.fr", role = c("cre", "aut"))
 Description: A shiny app to easily generate advanced graphics and some non
     parametric tests.
 License: MIT + file LICENSE
 Imports: 
+    base64enc,
+    bit64,
+    car,
     config (>= 0.3.1),
     datamods,
     dplyr,
