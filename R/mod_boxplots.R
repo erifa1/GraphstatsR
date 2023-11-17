@@ -573,11 +573,13 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
 
     output$downloadTAR <- downloadHandler(
-      filename <- glue::glue("{tmpdir}/figures_pngs.tar"), 
+      filename <- glue::glue("{tmpdir}/figures_pngs_ggplot.tar"), 
 
       content <- function(file) {
         print("WRITE PLOTS")
+        systim <- as.numeric(Sys.time())
         print(glue::glue("{tmpdir}/figures_pngs/"))
+        dir.create(glue::glue("{tmpdir}/figures_ggplot/figures_{systim}"), recursive = TRUE)
 
         if(input$ggstatOUT){
           req(pdfall_ggstat())
@@ -594,12 +596,12 @@ mod_boxplots_server <- function(id, r = r, session = session){
           for(i in 1:length(FEAT)){
             incProgress(1/length(FEAT))
             tt <- stringr::str_split(FEAT[i], "__")
-            ggsave(glue::glue("{tmpdir}/figures_{r_values$systim}/{sapply(tt,'[[',2)}_boxplot_{sapply(tt,'[[',1)}.{input$ImgFormat}"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm", device = input$ImgFormat)
+            ggsave(glue::glue("{tmpdir}/figures_ggplot/figures_{systim}/{sapply(tt,'[[',2)}_boxplot_{sapply(tt,'[[',1)}.{input$ImgFormat}"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm", device = input$ImgFormat)
           }
 
         }, value = 0, message = "Generating Images...")
 
-        tar(glue::glue("{tmpdir}/figures_pngs.tar"), files = glue::glue("{tmpdir}/figures_{r_values$systim}") )
+        tar(filename, files = glue::glue("{tmpdir}/figures_ggplot/figures_{systim}") )
 
 
         file.copy(filename, file)
@@ -792,7 +794,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
             met1 <- stringr::str_split_1(feat1, "__")[1] %>% stringr::str_replace("/", "_")
             typ1 <- stringr::str_split_1(feat1, "__")[2] %>% stringr::str_replace("/", "_")
-            jpeg(glue::glue("{tmpdir}/figures_jpgs/figures_{systim}/bp_{met1}_{typ1}.jpeg"),
+            jpeg(glue::glue("{tmpdir}/figures_jpgs/figures_{systim}/{typ1}_boxplot_{met1}.jpeg"),
               width = 1422, height = 800, quality = 100, res = 150)
             if(input$outlier_labs){
               car::Boxplot(as.formula(glue::glue("value~{r_values$fact3ok}")), data = tab1, main = feat1, 
