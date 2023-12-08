@@ -844,7 +844,16 @@ mod_boxplots_server <- function(id, r = r, session = session){
     summaryBP <- eventReactive(input$go3, {
       cat(file=stderr(), 'BOXPLOT summary', "\n")
       req(boxplot1())
-      
+      Amelt <- boxplot1()$tabF_melt2
+      fact3ok <- boxplot1()$fact3ok
+      print(head(Amelt))
+      save(list = ls(all.names = TRUE), file = "~/Bureau/debug.rdata", envir = environment()); print("SAVE0")
+
+      if( length(unique(Amelt$sample.id)) == length(unique(pull(Amelt, fact3ok))) ){
+        print("No statistic, no test...")
+        return()
+      }
+
       waiter_show(
         html =  tagList(spin_fading_circles(), h4("Calculating statistics 1/2..."))
       )
@@ -852,8 +861,6 @@ mod_boxplots_server <- function(id, r = r, session = session){
       q = c(.25, .5, .75)
       boxstat <- data.frame()
       #calculate quantiles by grouping variable
-      Amelt <- boxplot1()$tabF_melt2
-      print(head(Amelt))
       suppressWarnings({
 
         for(i in unique(Amelt$features)){
@@ -898,12 +905,18 @@ mod_boxplots_server <- function(id, r = r, session = session){
     wilcoxBP <- eventReactive(input$go3, {
       cat(file=stderr(), 'wilcoxBP table', "\n")
       req(boxplot1(), boxtab())
+      Amelt <- boxplot1()$tabF_melt2
+      fact3ok <- boxplot1()$fact3ok
+
+      if( length(unique(Amelt$sample.id)) == length(unique(pull(Amelt, fact3ok))) ){
+        print("No statistic, no test...")
+        return()
+      }
 
       waiter_show(
         html = tagList(spin_fading_circles(), h4("Calculating statistics 2/2..."))
       )
 
-      Amelt <- boxplot1()$tabF_melt2
       if(max(table(boxtab()[, boxplot1()$fact3ok])) == 1){
         return(NULL)
       }
