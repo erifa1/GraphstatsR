@@ -847,7 +847,6 @@ mod_boxplots_server <- function(id, r = r, session = session){
       Amelt <- boxplot1()$tabF_melt2
       fact3ok <- boxplot1()$fact3ok
       print(head(Amelt))
-      save(list = ls(all.names = TRUE), file = "~/Bureau/debug.rdata", envir = environment()); print("SAVE0")
 
       if( length(unique(Amelt$sample.id)) == length(unique(pull(Amelt, fact3ok))) ){
         print("No statistic, no test...")
