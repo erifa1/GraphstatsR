@@ -24,6 +24,7 @@ Imports:
     htmltools,
     plotly,
     PMCMRplus,
+    RColorBrewer,
     reshape2,
     rhdf5,
     shiny (>= 1.6.0),
@@ -35,7 +36,8 @@ Imports:
     stats,
     stringr,
     tibble,
-    tidyr
+    tidyr,
+    waiter
 Suggests: 
     spelling,
     testthat
