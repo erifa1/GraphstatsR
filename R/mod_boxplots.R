@@ -60,11 +60,15 @@ mod_boxplots_ui <- function(id){
                 
                 column(
                   h3("General settings"),
-                  textInput(ns("custom_ytitle"), "Custom y title", "None"),
                   materialSwitch(ns("ggplotstats1"), label = "Display ggstatsplot", value = TRUE, status = "primary"),
                   materialSwitch(ns("plotall"), label = "Plot all conditions (even NAs)", value = TRUE, status = "primary"),
                   materialSwitch(ns("grey_mode"), label = "Colored boxplot", value = TRUE, status = "primary"),
-                  materialSwitch(ns("y0"), label = "Set y lower limit to 0", value = TRUE, status = "primary"),
+                  h3("Y axis settings"),
+                  textInput(ns("custom_ytitle"), "Custom y title", "None"),
+                  materialSwitch(ns("ySci"), label = "Yaxis scientific numbers:", value = TRUE, status = "primary"),
+                  numericInput(ns("ymin"), "Y min:", 0),
+                  numericInput(ns("ymax"), "Y max:", NA),
+                  numericInput(ns("ysteps"), "Y steps:", NA),
                   width = 6
                   ),
                 column(
@@ -179,11 +183,14 @@ mod_boxplots_server <- function(id, r = r, session = session){
                           )
         )
 
+        updateNumericInput(session, "ymax", label = glue::glue("Ymax: (max value in dataset: {format(max(r_values$subsetds_final_melt$value, na.rm = TRUE), scientific = TRUE, digits = 2)})"), 
+          value = NA )
+
       }
     })
 
     
-    boxtab <- eventReactive(c(input$go4, input$go3), {  #
+    boxtab <- reactive({  
       cat(file=stderr(), 'BOXTAB', "\n")
       req(r_values$subsetds_final_melt, input$fact3, r$ds1())
       r_values$tabF_melt2 <- tabF_melt2 <- tabF_melt <- r_values$subsetds_final_melt
@@ -294,9 +301,24 @@ mod_boxplots_server <- function(id, r = r, session = session){
         labs(fill="")')
       eval(parse(text=fun))
 
-      if(input$y0){
-        p <- p + coord_cartesian(ylim = c(0, NA ))
+
+      # Y custom 
+      p <- p + coord_cartesian(ylim = c(input$ymin, input$ymax)) + 
+        scale_y_continuous(labels = function(x) format(x, scientific = input$ySci))
+      
+      if(!is.na(input$ysteps) & !is.na(input$ymin) & !is.na(input$ymax) ){
+        print("ycustom1")
+        p <- p + scale_y_continuous(breaks = seq(input$ymin, input$ymax, input$ysteps), 
+          labels = function(x) format(x, scientific = input$ySci))
       }
+
+      if( is.na(input$ymin) | is.na(input$ymax) & !is.na(input$ysteps) ){
+        print("ycustom2")
+        p <- p + coord_cartesian(ylim = c(0, max(tabfeat$value, na.rm = TRUE))) + 
+          scale_y_continuous(breaks = seq(0, max(tabfeat$value, na.rm = TRUE), input$ysteps), 
+          labels = function(x) format(x, scientific = input$ySci))
+      }
+
 
       if(!input$grey_mode){
         p <- p + 
@@ -320,13 +342,10 @@ mod_boxplots_server <- function(id, r = r, session = session){
         fun <-  glue::glue('
           ggstats <- ggbetweenstats(tabfeat, {r_values$fact3ok}, value, type = "nonparametric", 
               p.adjust.method = "fdr", pairwise.display = "significant", xlab = "", ylab = ytitle,
-              outlier.tagging = TRUE, outlier.label = "sample.id", results.subtitle = FALSE, title = input$feat1)
+              outlier.tagging = TRUE, outlier.label = "sample.id", results.subtitle = FALSE, title = input$feat1) + 
+              coord_cartesian(ylim = c(0, NA))
               ')
         eval(parse(text=fun))
-
-        if(input$y0){
-          ggstats <- ggstats + coord_cartesian(ylim = c(0, NA))
-        }
 
         r_values$ggstats <- ggstats
         outlist$ggstats <- ggstats
@@ -445,9 +464,24 @@ mod_boxplots_server <- function(id, r = r, session = session){
           labs(fill="")')
             eval(parse(text=fun))
 
-            if(input$y0){
-              listP[[FEAT[i]]] <- listP[[FEAT[i]]] + coord_cartesian(ylim = c(0, NA ))
-            }
+          # Y custom 
+          listP[[FEAT[i]]] <- listP[[FEAT[i]]] + coord_cartesian(ylim = c(input$ymin, input$ymax)) + 
+            scale_y_continuous(labels = function(x) format(x, scientific = input$ySci))
+          
+          if(!is.na(input$ysteps) & !is.na(input$ymin) & !is.na(input$ymax) ){
+            print("ycustom1")
+            listP[[FEAT[i]]] <- listP[[FEAT[i]]] + scale_y_continuous(breaks = seq(input$ymin, input$ymax, input$ysteps), 
+              labels = function(x) format(x, scientific = input$ySci))
+          }
+
+          if( is.na(input$ymin) | is.na(input$ymax) & !is.na(input$ysteps) ){
+            print("ycustom2")
+            listP[[FEAT[i]]] <- listP[[FEAT[i]]] + coord_cartesian(ylim = c(0, max(tabfeat$value, na.rm = TRUE))) + 
+              scale_y_continuous(breaks = seq(0, max(tabfeat$value, na.rm = TRUE), input$ysteps), 
+              labels = function(x) format(x, scientific = input$ySci))
+          }
+
+          
 
             if(input$outlier_labs){
               listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
@@ -545,13 +579,10 @@ mod_boxplots_server <- function(id, r = r, session = session){
               fun <-  glue::glue('
           listP[[FEAT[i]]] <- ggbetweenstats(tabfeat, {r_values$fact3ok}, value, type = "nonparametric", 
               p.adjust.method = "fdr", pairwise.display = "significant", xlab = "", ylab = ytitle,
-              outlier.tagging = TRUE, outlier.label = "sample.id", title = FEAT[i], results.subtitle = FALSE)')
+              outlier.tagging = TRUE, outlier.label = "sample.id", title = FEAT[i], results.subtitle = FALSE) + 
+              coord_cartesian(ylim = c(0, NA))')
 
             eval(parse(text=fun))
-
-            if(input$y0){
-              listP[[FEAT[i]]] <- listP[[FEAT[i]]] + coord_cartesian(ylim = c(0, NA))
-            }
 
             # print("WRITE PLOTS")
             # dir.create(paste(tmpdir, "/figures_ggstat/", sep = ""), recursive = TRUE)
@@ -716,22 +747,65 @@ mod_boxplots_server <- function(id, r = r, session = session){
               next
             }
 
+
+            # Y custom 
+
+            #validate steps 
+            if(!is.na(input$ymin) & is.na(input$ysteps) & is.na(input$ymax) ){
+              # print("ycustom01")
+              YLIM <- c(0, max(tab1$value, na.rm = TRUE))
+              STEPS <- NULL
+            }
+
+            if(!is.na(input$ymin) & is.na(input$ysteps) & !is.na(input$ymax) ){
+              # print("ycustom02")
+              YLIM <- c(input$ymin, input$ymax)
+              STEPS <- NULL
+            }
+            
+            if(!is.na(input$ysteps) & !is.na(input$ymin) & !is.na(input$ymax) ){
+              # print("ycustom1")
+              print(input$ymin); print(input$ymax); print(input$ysteps)
+              YLIM <- c(input$ymin, input$ymax)
+              STEPS <- format(seq(input$ymin, input$ymax, input$ysteps), scientific = input$ySci)
+            }
+
+            if( is.na(input$ymin) | is.na(input$ymax) & !is.na(input$ysteps) ){
+              # print("ycustom2")
+              YLIM <- c(0, max(tab1$value, na.rm = TRUE))
+              STEPS <- format(seq(0, max(tab1$value, na.rm = TRUE), input$steps), scientific = input$ySci)
+            }
+
+            fact3 <- r_values$fact3ok
+
             if(input$outlier_labs){
               car::Boxplot(as.formula(glue::glue("value~{r_values$fact3ok}")), data = tab1, main = feat1, 
                   cex.main = 0.6, boxwex=.3, col = gg_color_hue(nrow(unique(tab1[r_values$fact3ok]))),
                   cex.lab = 0.9, cex.axis = 0.5, las = 2, xlab = "", ylab = YLAB, 
-                  ylim=c(0,max(tab1$value, na.rm = TRUE)))
+                  ylim=YLIM, axes = FALSE)
+              axis(1, at= 1:length(levels(tab1[,r_values$fact3ok])), labels = levels(tab1[,r_values$fact3ok]), las = 2, cex.axis = 0.6)
+              if(!is.null(STEPS)){
+                axis(2, at = STEPS, cex.axis = 0.6, labels=format(as.numeric(STEPS), scientific=TRUE)); graphics::box()
+              }else{
+                axis(2); graphics::box()
+              }
+
             }else{
               boxplot(as.formula(glue::glue("value~{r_values$fact3ok}")), data = tab1, main = feat1, 
                   cex.main = 0.6, boxwex=.3, col = gg_color_hue(nrow(unique(tab1[r_values$fact3ok]))),
                   cex.lab = 0.9, cex.axis = 0.5, las = 2, xlab = "", ylab = "area", 
-                  ylim=c(0,max(tab1$value, na.rm = TRUE)))
+                  ylim=YLIM, axes = FALSE)
+              axis(1, at= 1:length(levels(tab1[,r_values$fact3ok])), labels = levels(tab1[,r_values$fact3ok]), las = 2, cex.axis = 0.6)
+              if(!is.null(STEPS)){
+                axis(2, at = STEPS, cex.axis = 0.6, labels=format(as.numeric(STEPS), scientific=TRUE)); graphics::box()
+              }else{
+                axis(2); graphics::box()
+              }
             }
 
               grid()
         }
         dev.off()
-
       })
 
     output$downloadTAR_rbase <- downloadHandler(
@@ -746,7 +820,8 @@ mod_boxplots_server <- function(id, r = r, session = session){
         req(r_values$tabF_melt2,r_values$fact3ok)
         tabF_melt2 <- r_values$tabF_melt2
 
-        
+        print(input$ymin); print(input$ymax); print(input$steps)
+
         for(i in 1:length(levels(tabF_melt2$features))){
 
           if(input$nbPicPage == 4){
@@ -796,21 +871,75 @@ mod_boxplots_server <- function(id, r = r, session = session){
             typ1 <- stringr::str_split_1(feat1, "__")[2] %>% stringr::str_replace("/", "_")
             jpeg(glue::glue("{tmpdir}/figures_jpgs/figures_{systim}/{typ1}_boxplot_{met1}.jpeg"),
               width = 1422, height = 800, quality = 100, res = 150)
+
+            # Y custom 
+
+            #validate steps 
+            if(!is.na(input$ymin) & is.na(input$ysteps) & is.na(input$ymax) ){
+              # print("ycustom01")
+              YLIM <- c(0, max(tab1$value, na.rm = TRUE))
+              STEPS <- NULL
+            }
+
+            if(!is.na(input$ymin) & is.na(input$ysteps) & !is.na(input$ymax) ){
+              # print("ycustom02")
+              YLIM <- c(input$ymin, input$ymax)
+              STEPS <- NULL
+            }
+            
+            if(!is.na(input$ysteps) & !is.na(input$ymin) & !is.na(input$ymax) ){
+              # print("ycustom1")
+              print(input$ymin); print(input$ymax); print(input$ysteps)
+              YLIM <- c(input$ymin, input$ymax)
+              STEPS <- format(seq(input$ymin, input$ymax, input$ysteps), scientific = input$ySci)
+            }
+
+            if( is.na(input$ymin) | is.na(input$ymax) & !is.na(input$ysteps) ){
+              # print("ycustom2")
+              YLIM <- c(0, max(tab1$value, na.rm = TRUE))
+              STEPS <- format(seq(0, max(tab1$value, na.rm = TRUE), input$steps), scientific = input$ySci)
+            }
+
+            # HERE
+            # if(!is.na(input$steps) & length(STEPS)> 100){
+            #   print("Too much steps on Y axis.")
+            #   print(length(STEPS))
+            #   validate("Too much steps on Y axis.")
+            #   return() 
+            # }
+
+            fact3 <- r_values$fact3ok
+
             if(input$outlier_labs){
               car::Boxplot(as.formula(glue::glue("value~{r_values$fact3ok}")), data = tab1, main = feat1, 
                   cex.main = 0.6, boxwex=.3, col = gg_color_hue(nrow(unique(tab1[r_values$fact3ok]))),
                   cex.lab = 0.9, cex.axis = 0.5, las = 2, xlab = "", ylab = YLAB, 
-                  ylim=c(0,max(tab1$value, na.rm = TRUE)))
+                  ylim=YLIM, axes = FALSE)
+              axis(1, at= 1:length(levels(tab1[,r_values$fact3ok])), labels = levels(tab1[,r_values$fact3ok]), las = 2, cex.axis = 0.6)
+              if(!is.null(STEPS)){
+                axis(2, at = STEPS, cex.axis = 0.6, labels=format(STEPS,scientific=input$ySci)); graphics::box()
+              }else{
+                axis(2); graphics::box()
+              }
+              #c(0,max(tab1$value, na.rm = TRUE))
+
             }else{
               boxplot(as.formula(glue::glue("value~{r_values$fact3ok}")), data = tab1, main = feat1, 
                   cex.main = 0.6, boxwex=.3, col = gg_color_hue(nrow(unique(tab1[r_values$fact3ok]))),
                   cex.lab = 0.9, cex.axis = 0.5, las = 2, xlab = "", ylab = "area", 
-                  ylim=c(0,max(tab1$value, na.rm = TRUE)))
+                  ylim=YLIM, axes = FALSE)
+              axis(1, at= 1:length(levels(tab1[,r_values$fact3ok])), labels = levels(tab1[,r_values$fact3ok]), las = 2, cex.axis = 0.6)
+              if(!is.null(STEPS)){
+                axis(2, at = STEPS, cex.axis = 0.6, labels=format(STEPS,scientific=input$ySci)); graphics::box()
+              }else{
+                axis(2); graphics::box()
+              }
             }
 
               grid()
             dev.off()
         }
+            # save(list = ls(all.names = TRUE), file = "debug.rdata", envir = environment()); print("SAVE0")
 
 
         tar(filename, files = glue::glue("{tmpdir}/figures_jpgs/figures_{systim}") )
