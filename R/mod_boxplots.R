@@ -94,7 +94,8 @@ mod_boxplots_ui <- function(id){
             actionButton(ns("go4"), "Update plot only", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
             uiOutput(ns("DLbuttons"))
         ),
-        box(title = "Reorder boxplots:", width = 5, status = "warning", solidHeader = TRUE, collapsible = TRUE,
+        box(title = "Reorder boxplots:", width = 5, status = "warning", solidHeader = TRUE, collapsible = FALSE,
+          style='height:400px;overflow-y: scroll;',
             uiOutput(ns("sortable"))#,
             # verbatimTextOutput(ns("results_sort"))
         )          
@@ -112,7 +113,7 @@ mod_boxplots_ui <- function(id){
       ),
       fluidRow(
         box(width = 12, 
-            title = 'Boxplot with stats:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+            title = 'Boxplot with stats:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = TRUE,
             plotOutput(ns("ggplotstatsOUT1"), height = "500")
         )
       ),

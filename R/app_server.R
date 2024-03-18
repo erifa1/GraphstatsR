@@ -21,6 +21,8 @@ app_server <- function( input, output, session ) {
   mod_inputs_server("inputs_1", session=session, r=r)
   mod_acp_server("acp_1", session=session, r=r)
   mod_boxplots_server("boxplots_1", session=session, r=r)
-  # mod_idmschoice_server("idmschoice_ui_1", session=session, r=r)
+
+  mod_inputs_isot_server("inputs_2", session=session, r=r)
+  mod_plots_isot_server("plot-tab2", session=session, r=r)
   
 }
