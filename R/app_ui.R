@@ -19,7 +19,7 @@ app_ui <- function(request) {
     # )
     dashboardPage(skin = "red",
                   dashboardHeader(
-                    title = "GraphStatsR 1.10.0",
+                    title = "GraphStatsR 2.0.0",
 
                     tags$li(class="dropdown",tags$a("Hosted by", img(src = SK8img,
                     title = "SK8", height = "20px"), headerText = "Source code",href="https://sk8.inrae.fr/", target="_blank")),
@@ -38,13 +38,19 @@ app_ui <- function(request) {
                           menuSubItem('Input data', tabName = 'inputs-tab'),
                           menuSubItem('ACP', tabName = 'acp-tab'),
                           menuSubItem('Boxplots', tabName = 'boxplot-tab')
+                          ),
+                      menuItem("IsoPlot", tabName= 'isoplot-tab', icon=icon("diagnoses"),
+                          startExpanded = TRUE,
+                          menuSubItem('Input data', tabName = 'inputs-tab2'),
+                          # menuSubItem('ACP', tabName = 'acp-tab2'),
+                          menuSubItem('Plots', tabName = 'plot-tab2')
                           )
                     )
                   ),
                   
                   dashboardBody(
                     tags$head(includeCSS(system.file(file.path('app/www', 'style.css'), package='graphstatsr'))),
-                    tabItems(                               
+                    tabItems(
                       tabItem(tabName = 'inputs-tab',
                               mod_inputs_ui("inputs_1")
                       ),
@@ -53,7 +59,14 @@ app_ui <- function(request) {
                       ),
                       tabItem(tabName = 'boxplot-tab',
                               mod_boxplots_ui("boxplots_1")
+                      ),
+                      tabItem(tabName = 'inputs-tab2',
+                              mod_inputs_isot_ui("inputs_2")
+                      ),
+                      tabItem(tabName = 'plot-tab2',
+                              mod_plots_isot_ui("plot-tab2")
                       )
+
                     )
                   )
                   
