@@ -13,14 +13,13 @@ A shiny app allowing users to generate advanced interactive graphics and statist
 ## Prerequisites
 
 
-R3.6.3 or upper is required (https://pbil.univ-lyon1.fr/CRAN/bin/)
+R4.3.3 or upper is required (https://pbil.univ-lyon1.fr/CRAN/bin/)
 
 
 * Linux
 
 ```bash
-sudo apt-get install r-base
-sudo apt-get install git
+sudo apt-get install r-base git libssl-dev cmake libcurl4-openssl-dev libgmp3-dev libmpfr-dev
 ```
 
 * Windows
