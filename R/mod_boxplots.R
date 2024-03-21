@@ -888,7 +888,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
             # print(dir( glue::glue("{tmpdir}/figures_jpgs_{systim}/{typ1}/")) )
 
             if(input$ImgFormat == "jpeg"){
-              jpeg(glue::glue("{tmpdir}/figures_jpgs_{systim}/{typ1}/toto_{met1}.jpeg"), width = 1422, height = 800, quality = 100, res = 150)
+              jpeg(glue::glue("{tmpdir}/figures_jpgs_{systim}/{typ1}/{met1}.jpeg"), width = 1422, height = 800, quality = 100, res = 150)
             }else if(input$ImgFormat == "png"){
               png(glue::glue("{tmpdir}/figures_jpgs_{systim}/{typ1}/{met1}.png"), width = 1422, height = 800, res = 150)
             }else if(input$ImgFormat == "tiff"){
@@ -969,10 +969,32 @@ mod_boxplots_server <- function(id, r = r, session = session){
         }
             # save(list = ls(all.names = TRUE), file = "debug.rdata", envir = environment()); print("SAVE0")
 
+        print("area")
         print(dir( glue::glue("{tmpdir}/figures_jpgs_{systim}/area/")) )
+
+        print("conc")
         print(dir( glue::glue("{tmpdir}/figures_jpgs_{systim}/concentration/")) )
+
+        print("ratio")
         print(dir( glue::glue("{tmpdir}/figures_jpgs_{systim}/ratio/")) )
-        tar(filename, files = glue::glue("{tmpdir}/figures_jpgs_{systim}/") )
+        tt <- input$outtype
+        print(tt)
+        print("TAR")
+
+        for (i in input$outtype){
+          tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}") )
+          tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}") )
+          tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}") )
+        }
+
+        print("TAR2")
+        dir.create(glue::glue("{tmpdir}/figures_jpgs_{systim}/output/"))
+        files <- dir(glue::glue("{tmpdir}/figures_jpgs_{systim}/"))
+        outfiles <- files[stringr::str_detect(files, ".tar")]
+
+        print(outfiles)
+
+        tar(filename, files = outfiles )  #glue::glue("{tmpdir}/figures_jpgs_{systim}/")
 
 
         file.copy(filename, file)
