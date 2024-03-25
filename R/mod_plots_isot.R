@@ -278,7 +278,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
         p3_bar <- p3_bar_group <- ggplot(tabhisto2, aes(x = get(input$group1), y = MeanGroupEnrC13)) +
               geom_bar(stat="identity", color="black", fill = "#b6bced",
                        position=position_dodge()) + 
-                theme_bw() + ylab("Mean EnrC13") +
+                theme_bw() + ylab("Mean EnrC13") + xlab(input$group1) +
               theme(legend.position = "None", 
                 axis.text.x = element_text(
                 angle = 45, hjust=1)) +
@@ -289,7 +289,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
         p4_bar <- p4_bar_group <- ggplot(tabhisto2, aes(x = get(input$group1), y = MeanGroupArea)) +
               geom_bar(stat="identity", color="black", fill = "#b6bced",
                        position=position_dodge()) + 
-                theme_bw() + ylab("Mean TotalArea") +
+                theme_bw() + ylab("Mean TotalArea") + xlab(input$group1) +
               theme(legend.position = "None", 
                 axis.text.x = element_text(
                 angle = 45, hjust=1)) +
@@ -602,7 +602,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
           LL[[glue::glue("{i}_enrC13")]] <- p3_bar_group <- ggplot(tabhisto2, aes(x = get(input$group1), y = MeanGroupEnrC13)) +
                 geom_bar(stat="identity", color="black", fill = "#b6bced",
                          position=position_dodge()) + 
-                  theme_bw() + ylab("Mean EnrC13") +
+                  theme_bw() + ylab("Mean EnrC13") + xlab("")  + 
                 theme(legend.position = "None", 
                   axis.text.x = element_text(
                   angle = 45, hjust=1)) +
@@ -613,7 +613,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
           LL[[glue::glue("{i}_area")]] <- p4_bar_group <- ggplot(tabhisto2, aes(x = get(input$group1), y = MeanGroupArea)) +
                 geom_bar(stat="identity", color="black", fill = "#b6bced",
                          position=position_dodge()) + 
-                  theme_bw() + ylab("Mean TotalArea") +
+                  theme_bw() + ylab("Mean TotalArea") + xlab("")  +
                 theme(legend.position = "None", 
                   axis.text.x = element_text(
                   angle = 45, hjust=1)) +
