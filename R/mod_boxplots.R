@@ -611,7 +611,14 @@ mod_boxplots_server <- function(id, r = r, session = session){
         print("WRITE PLOTS")
         systim <- as.numeric(Sys.time())
         print(glue::glue("{tmpdir}/figures_pngs/"))
-        dir.create(glue::glue("{tmpdir}/figures_ggplot/figures_{systim}"), recursive = TRUE)
+
+        if(length(input$outtype)>1){
+          for (i in input$outtype){
+            dir.create(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}/"), recursive = TRUE)
+          }
+        }else{
+          dir.create(glue::glue("{tmpdir}/figures_jpgs_{systim}/"), recursive = TRUE)
+        }
 
         if(input$ggstatOUT){
           req(pdfall_ggstat())
@@ -627,13 +634,44 @@ mod_boxplots_server <- function(id, r = r, session = session){
         withProgress({
           for(i in 1:length(FEAT)){
             incProgress(1/length(FEAT))
-            tt <- stringr::str_split(FEAT[i], "__")
-            ggsave(glue::glue("{tmpdir}/figures_ggplot/figures_{systim}/{sapply(tt,'[[',2)}_boxplot_{sapply(tt,'[[',1)}.{input$ImgFormat}"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm", device = input$ImgFormat)
+            # tt <- stringr::str_split(FEAT[i], "__")
+            met1 <- stringr::str_split_1(FEAT[i], "__")[1] %>% stringr::str_replace("/", "_")
+            typ1 <- stringr::str_split_1(FEAT[i], "__")[2] %>% stringr::str_replace("/", "_")
+
+            if(length(input$outtype)>1){
+              path1 <- glue::glue("{tmpdir}/figures_jpgs_{systim}/{typ1}/")
+            }else{
+              path1 <- glue::glue("{tmpdir}/figures_jpgs_{systim}")
+            }
+
+            # ggsave(glue::glue("{tmpdir}/figures_ggplot/figures_{systim}/{sapply(tt,'[[',2)}_boxplot_{sapply(tt,'[[',1)}.{input$ImgFormat}"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm", device = input$ImgFormat)
+            ggsave(glue::glue("{path1}/{met1}.{input$ImgFormat}"), listP[[FEAT[i]]], width = 20, height = 15, units = "cm", device = input$ImgFormat)
           }
 
         }, value = 0, message = "Generating Images...")
 
-        tar(filename, files = glue::glue("{tmpdir}/figures_ggplot/figures_{systim}") )
+        # tar(filename, files = glue::glue("{tmpdir}/figures_ggplot/figures_{systim}") )
+
+        if(length(input$outtype) > 1){
+
+          for (i in input$outtype){
+            tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}"))
+            tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}"))
+            tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}"))
+          }
+
+          print("TAR2")
+          # browser()
+          files <- dir(glue::glue("{tmpdir}/figures_jpgs_{systim}/"))
+          outfiles <- files[stringr::str_detect(files, ".tar")]
+
+          print(outfiles)
+
+          tar(filename, files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{outfiles}"))  #glue::glue("{tmpdir}/figures_jpgs_{systim}/")
+
+        }else{
+          tar(filename, files = glue::glue("{tmpdir}/figures_jpgs_{systim}/"))
+        }
 
 
         file.copy(filename, file)
@@ -815,11 +853,21 @@ mod_boxplots_server <- function(id, r = r, session = session){
       content <- function(file) {
         print("WRITE PLOTS")
         systim <- as.numeric(Sys.time())
-        print(glue::glue("{tmpdir}/figures_jpgs/figures_{systim}"))
-        dir.create(glue::glue("{tmpdir}/figures_jpgs/figures_{systim}"), recursive = TRUE)
+        print(glue::glue("{tmpdir}/figures_jpgs_{systim}"))
+
+        if(length(input$outtype)>1){
+          for (i in input$outtype){
+            dir.create(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}/"), recursive = TRUE)
+          }
+        }else{
+          dir.create(glue::glue("{tmpdir}/figures_jpgs_{systim}/"), recursive = TRUE)
+        }
 
         req(r_values$tabF_melt2,r_values$fact3ok)
-        tabF_melt2 <- r_values$tabF_melt2
+        tabF_melt1 <- r_values$tabF_melt2 
+        tabF_melt2 <- r_values$tabF_melt2 %>%
+                      separate(features, sep = "__", into = c("feat","type","unit"), remove =FALSE) %>%
+                      filter(type %in% input$outtype)
 
         print(input$ymin); print(input$ymax); print(input$steps)
 
@@ -870,8 +918,26 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
             met1 <- stringr::str_split_1(feat1, "__")[1] %>% stringr::str_replace("/", "_")
             typ1 <- stringr::str_split_1(feat1, "__")[2] %>% stringr::str_replace("/", "_")
-            jpeg(glue::glue("{tmpdir}/figures_jpgs/figures_{systim}/{typ1}_boxplot_{met1}.jpeg"),
-              width = 1422, height = 800, quality = 100, res = 150)
+
+            if(length(input$outtype)>1){
+              path1 <- glue::glue("{tmpdir}/figures_jpgs_{systim}/{typ1}/")
+            }else{
+              path1 <- glue::glue("{tmpdir}/figures_jpgs_{systim}")
+            }
+
+
+            if(input$ImgFormat == "jpeg"){
+              jpeg(glue::glue("{path1}/{met1}.jpeg"), width = 1422, height = 800, quality = 100, res = 150)
+            }else if(input$ImgFormat == "png"){
+              png(glue::glue("{path1}/{met1}.png"), width = 1422, height = 800, res = 150)
+            }else if(input$ImgFormat == "tiff"){
+              tiff(glue::glue("{path1}/{met1}.tiff"), width = 1422, height = 800, res = 150) 
+            }else if(input$ImgFormat == "bmp"){
+              bmp(glue::glue("{path1}/{met1}.bmp"), width = 1422, height = 800, res = 150)
+            }else{
+              jpeg(glue::glue("{path1}/{met1}.jpeg"), width = 1422, height = 800, quality = 100, res = 150)              
+            }
+
 
             # Y custom 
 
@@ -940,10 +1006,29 @@ mod_boxplots_server <- function(id, r = r, session = session){
               grid()
             dev.off()
         }
-            # save(list = ls(all.names = TRUE), file = "debug.rdata", envir = environment()); print("SAVE0")
 
 
-        tar(filename, files = glue::glue("{tmpdir}/figures_jpgs/figures_{systim}") )
+        if(length(input$outtype) > 1){
+
+          for (i in input$outtype){
+            tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}"))
+            tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}"))
+            tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}"))
+          }
+
+          print("TAR2")
+          # browser()
+          files <- dir(glue::glue("{tmpdir}/figures_jpgs_{systim}/"))
+          outfiles <- files[stringr::str_detect(files, ".tar")]
+
+          print(outfiles)
+
+          tar(filename, files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{outfiles}"))  #glue::glue("{tmpdir}/figures_jpgs_{systim}/")
+
+        }else{
+          tar(filename, files = glue::glue("{tmpdir}/figures_jpgs_{systim}/"))
+        }
+
 
 
         file.copy(filename, file)
