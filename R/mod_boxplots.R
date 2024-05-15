@@ -161,7 +161,6 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
       ds0 <- r$ds0()
       print(names(ds0))
-      print(head(ds0)[,1:10])
       type1 <- unique(ds0[,2])  # colonne type
       print("OBSERVE")
       print(type1)
