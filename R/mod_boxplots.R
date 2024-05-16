@@ -730,8 +730,6 @@ mod_boxplots_server <- function(id, r = r, session = session){
         req(r_values$tabF_melt2,r_values$fact3ok)
         tabF_melt2 <- r_values$tabF_melt2 %>% tidyr::separate(features, sep = "__", into = c("feat","type","unit"), remove = FALSE) %>% 
           filter(type %in% input$outtype)
-          #HERE
-         # browser()
         # print(unique(tabF_melt2[r_values$fact3ok]))
         # print(input$sorted1)
           if(!any(unique(tabF_melt2[r_values$fact3ok]) %in% input$sorted1)){
@@ -1156,6 +1154,14 @@ mod_boxplots_server <- function(id, r = r, session = session){
         
         pval_table <- rbind.data.frame(pval_table, ftable1)
       }
+
+      if(nrow(pval_table) == 0){
+        print("No results")
+        waiter_hide()
+        return()
+      }
+
+
       colnames(pval_table) = c("Features", "Condition1", "Condition2", "pvalue")
       
       Fpvaltable <- pval_table %>% mutate(adjusted_pval = p.adjust(pvalue, method = "fdr")) %>% mutate_if(is.character,as.factor) 
