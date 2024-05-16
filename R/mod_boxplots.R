@@ -728,8 +728,8 @@ mod_boxplots_server <- function(id, r = r, session = session){
       filename = glue::glue("{input$outtype}_figuresRbase_{systim}.pdf"),
       content = function(file) {
         req(r_values$tabF_melt2,r_values$fact3ok)
-        tabF_melt2 <- r_values$tabF_melt2
-
+        tabF_melt2 <- r_values$tabF_melt2 %>% tidyr::separate(features, sep = "__", into = c("feat","type","unit"), remove = FALSE) %>% 
+          filter(type %in% input$outtype)
         # print(unique(tabF_melt2[r_values$fact3ok]))
         # print(input$sorted1)
           if(!any(unique(tabF_melt2[r_values$fact3ok]) %in% input$sorted1)){
@@ -738,7 +738,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
           }
 
         pdf(file)
-        for(i in 1:length(levels(tabF_melt2$features))){
+        for(i in 1:length(unique(as.character(tabF_melt2$features)))){
 
           if(input$nbPicPage == 4){
             if((i %% 4) == 1) {par(mfrow= c(2,2), mar=c(4,4,2,0.5))}
@@ -760,7 +760,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
             }
           }
 
-          feat1 <- levels(tabF_melt2$features)[i]
+          feat1 <- unique(as.character(tabF_melt2$features))[i]
           if(input$custom_ytitle != "None"){
             YLAB <- input$custom_ytitle
           }else{
@@ -1154,6 +1154,14 @@ mod_boxplots_server <- function(id, r = r, session = session){
         
         pval_table <- rbind.data.frame(pval_table, ftable1)
       }
+
+      if(nrow(pval_table) == 0){
+        print("No results")
+        waiter_hide()
+        return()
+      }
+
+
       colnames(pval_table) = c("Features", "Condition1", "Condition2", "pvalue")
       
       Fpvaltable <- pval_table %>% mutate(adjusted_pval = p.adjust(pvalue, method = "fdr")) %>% mutate_if(is.character,as.factor) 
