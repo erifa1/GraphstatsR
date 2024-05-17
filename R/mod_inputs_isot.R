@@ -43,8 +43,7 @@ mod_inputs_isot_ui <- function(id){
                 actionButton(ns("launch_modal2"), "Metadata input module", icon = icon("play-circle"), 
                   style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
                 # downloadButton(ns("dl_mt_test"), "MetaData test"),
-                # uiOutput(ns("DLTemp")),
-                # downloadButton(outputId = ns("metadatTemplate_download"), label = "Download metadata template"),
+                uiOutput(ns("DLTemp")),
               tags$h3("Use filters to subset on metadata, and click on rows you need to remove:"),
               column(
                 width = 3,
@@ -190,8 +189,8 @@ mod_inputs_isot_server <- function(id, r = r, session = session){
 
         if(!is.null(A)){
           print("there is a DATASET")
-          DF <- data.frame(row.names = names(A)[4:ncol(A)])
-          DF$sample.id <- names(A)[4:ncol(A)]
+          DF <- data.frame(row.names = unique(A$sample))
+          DF$sample <- unique(A$sample)
           DF$factor_example <- glue::glue("group_{rep(LETTERS[1:3], each = 2, length.out=nrow(DF))}")
           write.csv(DF, file , row.names=FALSE)
         }else{

@@ -64,7 +64,6 @@ mod_inputs_ui <- function(id){
                   style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
                 downloadButton(ns("dl_mt_test"), "MetaData test"),
                 uiOutput(ns("DLTemp")),
-                # downloadButton(outputId = ns("metadatTemplate_download"), label = "Download metadata template"),
               tags$h3("Use filters to subset on metadata, and click on rows you need to remove:"),
               column(
                 width = 3,
