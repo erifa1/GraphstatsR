@@ -13,6 +13,9 @@
 tmpdir <- tempdir()
 systim <- as.numeric(Sys.time())
 
+mycolors <- c("#A6CEE3","#001287","#579CC7","#70ff6b","#40A635","#89CB6C","#0c6e09","#EB494A","#F99392","#ad1203","#FDA746","#f5f54e","#FE8205","#cc8b2f","#8a0da6","#BFA5CF","#8861AC","#E7E099","#DEB969","#B15928")
+#colorRampPalette(RColorBrewer::brewer.pal(12, "Paired"))(20)
+
 mod_plots_isot_ui <- function(id){
   ns <- NS(id)
   tagList(
@@ -134,7 +137,6 @@ mod_plots_isot_server <- function(id, r = r, session = session){
       output$histo_plotly <- renderPlotly({
         req(r$merged2())
         mtab <- r$merged2()
-        mycolors <- colorRampPalette(RColorBrewer::brewer.pal(12, "Paired"))(20)
         xform <- list()
           fun <- glue::glue("
           mtab <- mtab %>%
@@ -231,9 +233,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
       ")
       eval(parse(text=fun))
 
-      mycolors <- colorRampPalette(RColorBrewer::brewer.pal(12, "Paired"))(20)
       xform <- list()
-
       CalculPerMerabolite <- mtab %>% group_by(sample) %>% group_by(metabolite, .add = TRUE) %>% 
       mutate(TotArea = sum(corrected_area), CID = 100 * corrected_area / sum(corrected_area), 
       EnrC13 = 100 * sum(Area_Iso)/(max(isotopologue) * sum(corrected_area)))
@@ -358,7 +358,6 @@ mod_plots_isot_server <- function(id, r = r, session = session){
       eval(parse(text=fun))
 
       LL <- list()
-      mycolors <- colorRampPalette(RColorBrewer::brewer.pal(12, "Paired"))(20)
 
       col1 = mycolors[1:length(levels(mtab$Miso))]
       withProgress({
