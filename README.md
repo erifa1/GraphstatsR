@@ -19,7 +19,7 @@ R4.3.3 or upper is required (https://pbil.univ-lyon1.fr/CRAN/bin/)
 * Linux
 
 ```bash
-sudo apt-get install r-base git libssl-dev cmake libcurl4-openssl-dev libgmp3-dev libmpfr-dev
+sudo apt-get install r-base git libssl-dev cmake libcurl4-openssl-dev libgmp3-dev libmpfr-dev zlib1g-dev
 ```
 
 * Windows
@@ -42,7 +42,7 @@ remotes::install_gitlab(repo = "etienne.rifa/graphstats", host = "forgemia.inra.
 
 ``` r
 # To update app 
-remotes::install_gitlab(repo = "etienne.rifa/graphstats", host = "forgemia.inra.fr")
+remotes::install_gitlab(repo = "etienne.rifa/graphstats", host = "forgemia.inra.fr", upgrade = FALSE)
 
 # To run app
 library(graphstatsr)
@@ -55,7 +55,9 @@ Features table and metadata files are available in the `dataset` folder to test 
 
 ```r
 dir( system.file("dataset/", package = "graphstatsr") )
-# [1] "features_quanti_data.csv" "metadata_file.csv"
+# "features_quanti_data.csv" "metadata_file.csv" # for Easy Stats
+
+# "isoplot_quantification_table.csv" "isoplot_metadata.csv" # for IsoPlot
 
 ```
 
