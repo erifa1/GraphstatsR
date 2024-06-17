@@ -17,8 +17,8 @@ install_linux:
     - R -e 'remotes::install_gitlab(repo = "etienne.rifa/graphstats", host = "forgemia.inra.fr")'
   artifacts:
     paths:
-      - graphstatsR_linux.Rcheck/
-    expire_in: 3 hrs
+      - remotes_install.log
+    expire_in: 1 day
 
 build_linux:
   stage: build
@@ -27,8 +27,8 @@ build_linux:
     - R CMD build .
   artifacts:
     paths:
-      - graphstatsR_linux.tar.gz
-    expire_in: 3 hrs
+      - graphstatsr*.tar.gz
+    expire_in: 1 day
   dependencies:
     - install_linux
 
@@ -36,53 +36,10 @@ check_linux:
   stage: check
   image: rocker/r-ver:${R_VERSION}
   script:
-    - R CMD check --as-cran graphstatsR_linux.tar.gz
+    - R CMD check --as-cran graphstatsr*.tar.gz
   dependencies:
     - build_linux
   artifacts:
     paths:
-      - graphstatsR_linux.Rcheck/
-    expire_in: 3 hrs
-
-
-install_windows:
-  stage: install
-  tags:
-    - windows
-  before_script:
-    - choco install git
-    - choco install rtools --version 4.3.5958 -y
-  script:
-    - choco install r.project --version=${R_VERSION}
-    - R -e 'install.packages("devtools")'
-    - R -e 'devtools::install_deps(dependencies = TRUE)'
-  artifacts:
-    paths:
-      - graphstatsR_win.Rcheck/
-    expire_in: 3 hrs
-
-build_windows:
-  stage: build
-  tags:
-    - windows
-  script:
-    - R CMD build .
-  artifacts:
-    paths:
-      - graphstatsR_win.tar.gz
-    expire_in: 3 hrs
-  dependencies:
-    - install_windows
-
-check_windows:
-  stage: check
-  tags:
-    - windows
-  script:
-    - R CMD check --as-cran graphstatsR_win.tar.gz
-  dependencies:
-    - build_windows
-  artifacts:
-    paths:
-      - graphstatsR_win.Rcheck/
-    expire_in: 3 hrs
+      - graphstatsr.Rcheck/
+    expire_in: 1 day
