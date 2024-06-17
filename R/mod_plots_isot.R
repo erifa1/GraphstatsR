@@ -174,7 +174,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
             p1 <- plotly::plot_ly(tab_plot, x = as.formula(glue::glue("~{input$group1}")), y = ~meanGroup, type = 'bar', 
                   name = ~Miso, color = ~Miso, height = 500, colors = mycolors[1:length(levels(tab_plot$Miso))]) %>% 
                   plotly::layout(title=glue::glue("Isotopologue Fraction {input$feat2}"), yaxis = list(title = 'Isotopologue fraction'), 
-                  barmode = "group", xaxis = xform, barnorm = "fraction")
+                  barmode = "group", xaxis = xform)
           }else{        
             p1 <- plotly::plot_ly(tab_plot, x = as.formula(glue::glue("~{input$group1}")), y = ~meanGroupAbs, type = 'bar', 
                   name = ~Miso, color = ~Miso, height = 500, colors = mycolors[1:length(levels(tab_plot$Miso))]) %>% 
@@ -188,7 +188,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
             p1 <- plotly::plot_ly(tab_plot, x = as.formula(glue::glue("~{input$group1}")), y = ~meanGroup, type = 'bar', 
                   name = ~Miso, color = ~Miso, height = 500, colors = mycolors[1:length(levels(tab_plot$Miso))]) %>% 
                   plotly::layout(title=glue::glue("Isotopologue Fraction {input$feat2}"), yaxis = list(title = 'Isotopologue fraction'), 
-                  barmode = "stack", xaxis = xform, barnorm = "fraction")
+                  barmode = "stack", xaxis = xform)
           }else{        
             p1 <- plotly::plot_ly(tab_plot, x = as.formula(glue::glue("~{input$group1}")), y = ~meanGroupAbs, type = 'bar', 
                   name = ~Miso, color = ~Miso, height = 500, colors = mycolors[1:length(levels(tab_plot$Miso))]) %>% 
@@ -207,10 +207,10 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
           xform <- list()
           if(input$relativOUT){
-            p1 <- plotly::plot_ly(tab_plot, x = ~sample, y = ~corrected_area, type = 'bar', 
+            p1 <- plotly::plot_ly(tab_plot, x = ~sample, y = ~isotopologue_fraction, type = 'bar', 
                   name = ~Miso, color = ~Miso, height = 500, colors = mycolors[1:length(levels(tab_plot$Miso))]) %>% 
                   plotly::layout(title=glue::glue("Isotopologue Fraction {input$feat2}"), yaxis = list(title = 'Isotopologue fraction'), 
-                  barmode = BARMOD, xaxis = xform, barnorm = "fraction")
+                  barmode = BARMOD, xaxis = xform)
           }else{        
             p1 <- plotly::plot_ly(tab_plot, x = ~sample, y = ~corrected_area, type = 'bar', 
                   name = ~Miso, color = ~Miso, height = 500, colors = mycolors[1:length(levels(tab_plot$Miso))]) %>% 
