@@ -17,7 +17,7 @@ install_linux:
     - R -e 'remotes::install_gitlab(repo = "etienne.rifa/graphstats", host = "forgemia.inra.fr")'
   artifacts:
     paths:
-      - .Rcheck/
+      - graphstatsR_linux.Rcheck/
     expire_in: 3 hrs
 
 build_linux:
@@ -41,7 +41,7 @@ check_linux:
     - build_linux
   artifacts:
     paths:
-      - .Rcheck/
+      - graphstatsR_linux.Rcheck/
     expire_in: 3 hrs
 
 
@@ -58,7 +58,7 @@ install_windows:
     - R -e 'devtools::install_deps(dependencies = TRUE)'
   artifacts:
     paths:
-      - .Rcheck/
+      - graphstatsR_win.Rcheck/
     expire_in: 3 hrs
 
 build_windows:
@@ -84,5 +84,5 @@ check_windows:
     - build_windows
   artifacts:
     paths:
-      - .Rcheck/
+      - graphstatsR_win.Rcheck/
     expire_in: 3 hrs
