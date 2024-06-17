@@ -1,9 +1,10 @@
 stages:
   - install
+  - build
   - check
 
 variables:
-  R_VERSION: "4.1.0"
+  R_VERSION: "4.3.3"
 
 install_linux:
   stage: install
@@ -17,16 +18,71 @@ install_linux:
   artifacts:
     paths:
       - .Rcheck/
-    expire_in: 1 day
+    expire_in: 3 hrs
+
+build_linux:
+  stage: build
+  image: rocker/r-ver:${R_VERSION}
+  script:
+    - R CMD build .
+  artifacts:
+    paths:
+      - *.tar.gz
+    expire_in: 3 hrs
+  dependencies:
+    - install_linux
 
 check_linux:
   stage: check
   image: rocker/r-ver:${R_VERSION}
   script:
-    - R CMD check --as-cran .
+    - R CMD check --as-cran *.tar.gz
   dependencies:
-    - install_linux
+    - build_linux
   artifacts:
     paths:
       - .Rcheck/
-    expire_in: 1 day
+    expire_in: 3 hrs
+
+
+install_windows:
+  stage: install
+  tags:
+    - windows
+  before_script:
+    - choco install git
+    - choco install rtools --version 4.3.5958 -y
+  script:
+    - choco install r.project --version=${R_VERSION}
+    - R -e 'install.packages("devtools")'
+    - R -e 'devtools::install_deps(dependencies = TRUE)'
+  artifacts:
+    paths:
+      - .Rcheck/
+    expire_in: 3 hrs
+
+build_windows:
+  stage: build
+  tags:
+    - windows
+  script:
+    - R CMD build .
+  artifacts:
+    paths:
+      - *.tar.gz
+    expire_in: 3 hrs
+  dependencies:
+    - install_windows
+
+check_windows:
+  stage: check
+  tags:
+    - windows
+  script:
+    - R CMD check --as-cran *.tar.gz
+  dependencies:
+    - build_windows
+  artifacts:
+    paths:
+      - .Rcheck/
+    expire_in: 3 hrs
