@@ -27,7 +27,7 @@ build_linux:
     - R CMD build .
   artifacts:
     paths:
-      - *.tar.gz
+      - graphstatsR_linux.tar.gz
     expire_in: 3 hrs
   dependencies:
     - install_linux
@@ -36,7 +36,7 @@ check_linux:
   stage: check
   image: rocker/r-ver:${R_VERSION}
   script:
-    - R CMD check --as-cran *.tar.gz
+    - R CMD check --as-cran graphstatsR_linux.tar.gz
   dependencies:
     - build_linux
   artifacts:
@@ -69,7 +69,7 @@ build_windows:
     - R CMD build .
   artifacts:
     paths:
-      - *.tar.gz
+      - graphstatsR_win.tar.gz
     expire_in: 3 hrs
   dependencies:
     - install_windows
@@ -79,7 +79,7 @@ check_windows:
   tags:
     - windows
   script:
-    - R CMD check --as-cran *.tar.gz
+    - R CMD check --as-cran graphstatsR_win.tar.gz
   dependencies:
     - build_windows
   artifacts:
