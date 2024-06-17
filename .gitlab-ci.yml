@@ -1,0 +1,82 @@
+stages:
+  - install
+  - check
+
+variables:
+  R_VERSION: "4.1.0"
+
+install_linux:
+  stage: install
+  image: rocker/r-ver:${R_VERSION}
+  script:
+    - R -e 'install.packages("remotes")'
+    - R -e 'remotes::install_gitlab(repo = "etienne.rifa/graphstats", host = "forgemia.inra.fr")'
+  artifacts:
+    paths:
+      - .Rcheck/
+    expire_in: 1 day
+
+check_linux:
+  stage: check
+  image: rocker/r-ver:${R_VERSION}
+  script:
+    - R CMD check --as-cran .
+  dependencies:
+    - install_linux
+  artifacts:
+    paths:
+      - .Rcheck/
+    expire_in: 1 day
+
+install_windows:
+  stage: install
+  tags:
+    - windows
+  script:
+    - choco install r.project --version=${R_VERSION}
+    - R -e 'install.packages("remotes")'
+    - R -e 'remotes::install_gitlab(repo = "etienne.rifa/graphstats", host = "forgemia.inra.fr")'
+  artifacts:
+    paths:
+      - .Rcheck/
+    expire_in: 1 day
+
+check_windows:
+  stage: check
+  tags:
+    - windows
+  script:
+    - R CMD check --as-cran .
+  dependencies:
+    - install_windows
+  artifacts:
+    paths:
+      - .Rcheck/
+    expire_in: 1 day
+
+install_macos:
+  stage: install
+  tags:
+    - macos
+  script:
+    - brew install r
+    - R -e 'install.packages("remotes")'
+    - R -e 'remotes::install_gitlab(repo = "etienne.rifa/graphstats", host = "forgemia.inra.fr")'
+  artifacts:
+    paths:
+      - .Rcheck/
+    expire_in: 1 day
+
+check_macos:
+  stage: check
+  tags:
+    - macos
+  script:
+    - R CMD check --as-cran .
+  dependencies:
+    - install_macos
+  artifacts:
+    paths:
+      - .Rcheck/
+    expire_in: 1 day
+
