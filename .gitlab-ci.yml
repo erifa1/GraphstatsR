@@ -1,7 +1,5 @@
 stages:
   - install
-  - build
-  - check
 
 variables:
   R_VERSION: "4.3.3"
@@ -15,31 +13,4 @@ install_linux:
   script:
     - R -e 'install.packages("remotes")'
     - R -e 'remotes::install_gitlab(repo = "etienne.rifa/graphstats", host = "forgemia.inra.fr")'
-  artifacts:
-    paths:
-      - remotes_install.log
-    expire_in: 1 day
-
-build_linux:
-  stage: build
-  image: rocker/r-ver:${R_VERSION}
-  script:
-    - R CMD build .
-  artifacts:
-    paths:
-      - graphstatsr*.tar.gz
-    expire_in: 1 day
-  dependencies:
-    - install_linux
-
-check_linux:
-  stage: check
-  image: rocker/r-ver:${R_VERSION}
-  script:
-    - R CMD check --as-cran graphstatsr*.tar.gz
-  dependencies:
-    - build_linux
-  artifacts:
-    paths:
-      - graphstatsr.Rcheck/
-    expire_in: 1 day
+    - R -e 'devtools::check()'
