@@ -135,8 +135,12 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
 
       output$histo_plotly <- renderPlotly({
+        print("prepare PLOTLY")
         req(r$merged2())
-        mtab <- r$merged2()
+        mtab <- r_values$merged #r$merged2()
+
+        print(head(mtab))
+
         xform <- list()
           fun <- glue::glue("
           mtab <- mtab %>%
@@ -222,8 +226,18 @@ mod_plots_isot_server <- function(id, r = r, session = session){
       })
 
     output$histo_Aire_enrC13 <- renderPlot({
+      print("prepare PLOT")
+
       req(r$merged2())
-      mtab <- r$merged2()
+      mtab <- r_values$merged #r$merged2()
+
+      print(head(mtab))
+      
+      ii=list()
+      ii$mtab <- mtab
+      ii$group1 <- input$group1
+      ii$sorted2 <- input$sorted2
+            
 
       fun <- glue::glue("
       mtab <- mtab %>%
@@ -233,10 +247,15 @@ mod_plots_isot_server <- function(id, r = r, session = session){
       ")
       eval(parse(text=fun))
 
+      print(head(mtab))
+      save(list = ls(all.names = TRUE), file = "debug.rdata", envir = environment()); print("SAVE0")
       xform <- list()
       CalculPerMerabolite <- mtab %>% group_by(sample) %>% group_by(metabolite, .add = TRUE) %>% 
       mutate(TotArea = sum(corrected_area), CID = 100 * corrected_area / sum(corrected_area), 
       EnrC13 = 100 * sum(Area_Iso)/(max(isotopologue) * sum(corrected_area)))
+
+      print("CalculPerMerabolite")
+      print(head(CalculPerMerabolite))
 
       cols2group <- c(input$group1)
       r$MeanSD_Area_EnrC13_per_compound <- MeanSD_Area_EnrC13_per_compound <- CalculPerMerabolite %>% group_by(across(all_of(cols2group)), .add = TRUE) %>%
@@ -306,6 +325,8 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
       # pour chaque condition  metabolite en x
       MeanSD_Area_EnrC13_per_compound <- r$MeanSD_Area_EnrC13_per_compound
+      print(colnames(MeanSD_Area_EnrC13_per_compound))
+
       tabhisto3 <- MeanSD_Area_EnrC13_per_compound %>% filter(!!as.symbol(input$group1) == input$level1)  %>% ungroup() %>% 
           group_by(metabolite) %>% 
           summarise(MeanEnrC13Group = mean(MeanEnrC13, na.rm = TRUE), MeanTotAreaGroup = mean(MeanTotalArea, na.rm = TRUE),

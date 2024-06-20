@@ -366,19 +366,19 @@ mod_inputs_isot_server <- function(id, r = r, session = session){
       })
 
 
-      output$histo_plotly <- renderPlotly({
-        req(mergetable())
-        # req(input$go3)
-        tab_plot <- mergetable() %>% filter(metabolite == "AMP")
+      # output$histo_plotly <- renderPlotly({
+      #   req(mergetable())
+      #   # req(input$go3)
+      #   tab_plot <- mergetable() %>% filter(metabolite == "AMP")
 
-        xform <- list()
-        p1 <- plotly::plot_ly(tab_plot, x = ~sample, y = ~corrected_area, type = 'bar', 
-                name = ~Miso, color = ~Miso, height = 700) %>% 
-        plotly::layout(title="Raw area", yaxis = list(title = 'Raw area'), 
-        barmode = 'stack', xaxis = xform)
+      #   xform <- list()
+      #   p1 <- plotly::plot_ly(tab_plot, x = ~sample, y = ~corrected_area, type = 'bar', 
+      #           name = ~Miso, color = ~Miso, height = 700) %>% 
+      #   plotly::layout(title="Raw area", yaxis = list(title = 'Raw area'), 
+      #   barmode = 'stack', xaxis = xform)
 
-        p1
-      })
+      #   p1
+      # })
 
 
 
