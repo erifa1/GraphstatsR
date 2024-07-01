@@ -537,7 +537,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
         withProgress({
           for(i in 1:length(FEAT)){
             incProgress(1/length(FEAT))
-            ggsave(glue::glue("{tmpdir}/figures_{systim}/HistPlot_{FEAT[i]}.png"), listP[[FEAT[i]]], width = 30, height = 15, units = "cm")
+            ggsave(glue::glue("{tmpdir}/figures_{systim}/{FEAT[i]}.png"), listP[[FEAT[i]]], width = 30, height = 15, units = "cm")
           }
 
         }, value = 0, message = "Generating PNGs...")

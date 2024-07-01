@@ -9,9 +9,9 @@
 
 A shiny app allowing users to generate advanced interactive graphics and statistical tests. 
 
+Online instance here: https://graphstatsr.sk8.inrae.fr/
 
 ## Prerequisites
-
 
 R4.3.3 or upper is required (https://pbil.univ-lyon1.fr/CRAN/bin/)
 
