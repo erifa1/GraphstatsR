@@ -781,7 +781,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
             if(all(is.na(tab1$value))){
               plot(c(0, 1), c(0, 1), ann = F, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n')
-              text(x = 0.5, y = 0.5, glue::glue("{feat1}\nNo data"), cex = 1.6, col = "black")
+              text(x = 0.5, y = 0.5, glue::glue("{feat1}\nNo data"), cex = 0.5, col = "black")
               next
             }
 
@@ -909,11 +909,6 @@ mod_boxplots_server <- function(id, r = r, session = session){
             eval(parse(text=fun1))
             row.names(tab1) <- tab1$sample.id
 
-            if(all(is.na(tab1$value))){
-              plot(c(0, 1), c(0, 1), ann = F, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n')
-              text(x = 0.5, y = 0.5, glue::glue("{feat1}\nNo data"), cex = 1.6, col = "black")
-              next
-            }
 
             met1 <- stringr::str_split_1(feat1, "__")[1] %>% stringr::str_replace("/", "_")
             typ1 <- stringr::str_split_1(feat1, "__")[2] %>% stringr::str_replace("/", "_")
@@ -937,6 +932,12 @@ mod_boxplots_server <- function(id, r = r, session = session){
               jpeg(glue::glue("{path1}/{met1}.jpeg"), width = 1422, height = 800, quality = 100, res = 150)              
             }
 
+            if(all(is.na(tab1$value))){
+              plot(c(0, 1), c(0, 1), ann = F, bty = 'n', type = 'n', xaxt = 'n', yaxt = 'n')
+              text(x = 0.5, y = 0.5, glue::glue("{feat1}\nNo data"), cex = 0.5, col = "black")
+              dev.off()
+              next
+            }
 
             # Y custom 
 
