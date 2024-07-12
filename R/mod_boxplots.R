@@ -76,7 +76,7 @@ mod_boxplots_ui <- function(id){
                   selectInput( ns("nbPicPage"), label = "Select number of plot per pdf page (max 4 per page):", choices = c(1:4), selected = 1),
                   materialSwitch(ns("ggstatOUT"), label = "Output PDF/Images with ggstat plots", value = FALSE, status = "primary"),
                   materialSwitch(ns("verticaldisplay"), label = "Vertical display in pdf or not (2 per page)", value = TRUE, status = "primary"),
-                  sliderInput(ns("sizexlab"), label = "X labels size", min = 0, max = 1, value = 0.8, step = 0.05),
+                  sliderInput(ns("sizexlab"), label = "X labels size", min = 0, max = 1, value = 0.5, step = 0.05),
                   materialSwitch(ns("outlier_labs"), label = "Inform outlier in pdf output", value = TRUE, status = "primary"),
                   selectInput( ns("ImgFormat"), label = "Image format :", choices = c("jpeg", "eps", "ps", "pdf", "tiff", "png", "bmp", "svg"), selected = 1),
                   # materialSwitch(ns("pngs_out"), label = "Output png for each feature (long process)", value = FALSE, status = "primary"),
@@ -821,9 +821,9 @@ mod_boxplots_server <- function(id, r = r, session = session){
                   cex.main = 0.6, boxwex=.3, col = gg_color_hue(nrow(unique(tab1[r_values$fact3ok]))),
                   cex.lab = 0.9, cex.axis = 0.5, las = 2, xlab = "", ylab = YLAB, 
                   ylim=YLIM, axes = FALSE)
-              axis(1, at= 1:length(levels(tab1[,r_values$fact3ok])), labels = levels(tab1[,r_values$fact3ok]), las = 2, cex.axis = 0.6)
+              axis(1, at= 1:length(levels(tab1[,r_values$fact3ok])), labels = levels(tab1[,r_values$fact3ok]), las = 2, cex.axis = input$sizexlab)
               if(!is.null(STEPS)){
-                axis(2, at = STEPS, cex.axis = 0.6, labels=format(as.numeric(STEPS), scientific=TRUE)); graphics::box()
+                axis(2, at = STEPS, cex.axis = input$sizexlab, labels=format(as.numeric(STEPS), scientific=TRUE)); graphics::box()
               }else{
                 axis(2); graphics::box()
               }
@@ -831,11 +831,11 @@ mod_boxplots_server <- function(id, r = r, session = session){
             }else{
               boxplot(as.formula(glue::glue("value~{r_values$fact3ok}")), data = tab1, main = feat1, 
                   cex.main = 0.6, boxwex=.3, col = gg_color_hue(nrow(unique(tab1[r_values$fact3ok]))),
-                  cex.lab = 0.9, cex.axis = 0.5, las = 2, xlab = "", ylab = "area", 
+                  cex.lab = 0.9, cex.axis = input$sizexlab, las = 2, xlab = "", ylab = "area", 
                   ylim=YLIM, axes = FALSE)
-              axis(1, at= 1:length(levels(tab1[,r_values$fact3ok])), labels = levels(tab1[,r_values$fact3ok]), las = 2, cex.axis = 0.6)
+              axis(1, at= 1:length(levels(tab1[,r_values$fact3ok])), labels = levels(tab1[,r_values$fact3ok]), las = 2, cex.axis = input$sizexlab)
               if(!is.null(STEPS)){
-                axis(2, at = STEPS, cex.axis = 0.6, labels=format(as.numeric(STEPS), scientific=TRUE)); graphics::box()
+                axis(2, at = STEPS, cex.axis = input$sizexlab, labels=format(as.numeric(STEPS), scientific=TRUE)); graphics::box()
               }else{
                 axis(2); graphics::box()
               }
@@ -980,11 +980,11 @@ mod_boxplots_server <- function(id, r = r, session = session){
             if(input$outlier_labs){
               car::Boxplot(as.formula(glue::glue("value~{r_values$fact3ok}")), data = tab1, main = feat1, 
                   cex.main = 0.6, boxwex=.3, col = gg_color_hue(nrow(unique(tab1[r_values$fact3ok]))),
-                  cex.lab = 0.9, cex.axis = 0.5, las = 2, xlab = "", ylab = YLAB, 
+                  cex.lab = 0.9, cex.axis = input$sizexlab, las = 2, xlab = "", ylab = YLAB, 
                   ylim=YLIM, axes = FALSE)
-              axis(1, at= 1:length(levels(tab1[,r_values$fact3ok])), labels = levels(tab1[,r_values$fact3ok]), las = 2, cex.axis = 0.6)
+              axis(1, at= 1:length(levels(tab1[,r_values$fact3ok])), labels = levels(tab1[,r_values$fact3ok]), las = 2, cex.axis = input$sizexlab)
               if(!is.null(STEPS)){
-                axis(2, at = STEPS, cex.axis = 0.6, labels=format(STEPS,scientific=input$ySci)); graphics::box()
+                axis(2, at = STEPS, cex.axis = input$sizexlab, labels=format(STEPS,scientific=input$ySci)); graphics::box()
               }else{
                 axis(2); graphics::box()
               }
@@ -993,11 +993,11 @@ mod_boxplots_server <- function(id, r = r, session = session){
             }else{
               boxplot(as.formula(glue::glue("value~{r_values$fact3ok}")), data = tab1, main = feat1, 
                   cex.main = 0.6, boxwex=.3, col = gg_color_hue(nrow(unique(tab1[r_values$fact3ok]))),
-                  cex.lab = 0.9, cex.axis = 0.5, las = 2, xlab = "", ylab = "area", 
+                  cex.lab = 0.9, cex.axis = input$sizexlab, las = 2, xlab = "", ylab = "area", 
                   ylim=YLIM, axes = FALSE)
-              axis(1, at= 1:length(levels(tab1[,r_values$fact3ok])), labels = levels(tab1[,r_values$fact3ok]), las = 2, cex.axis = 0.6)
+              axis(1, at= 1:length(levels(tab1[,r_values$fact3ok])), labels = levels(tab1[,r_values$fact3ok]), las = 2, cex.axis = input$sizexlab)
               if(!is.null(STEPS)){
-                axis(2, at = STEPS, cex.axis = 0.6, labels=format(STEPS,scientific=input$ySci)); graphics::box()
+                axis(2, at = STEPS, cex.axis = input$sizexlab, labels=format(STEPS,scientific=input$ySci)); graphics::box()
               }else{
                 axis(2); graphics::box()
               }

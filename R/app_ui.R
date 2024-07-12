@@ -19,7 +19,7 @@ app_ui <- function(request) {
     # )
     dashboardPage(skin = "red",
                   dashboardHeader(
-                    title = "GraphStatsR 2.1.3",
+                    title = "GraphStatsR 2.1.4",
 
                     tags$li(class="dropdown",tags$a("Hosted by", img(src = SK8img,
                     title = "SK8", height = "20px"), headerText = "Source code",href="https://sk8.inrae.fr/", target="_blank")),
