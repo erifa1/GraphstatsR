@@ -5,6 +5,7 @@
 #' @import shiny
 #' @import shinydashboard
 #' @importFrom shinyalert useShinyalert
+#' @importFrom base64enc dataURI
 #' @noRd
 
 SK8img <- base64enc::dataURI(file=system.file(file.path('app/www', 'SK8.png'), package='graphstatsr'))

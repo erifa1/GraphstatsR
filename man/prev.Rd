@@ -12,3 +12,4 @@ prev(x)
 \description{
 preview 10 lines 10columns max
 }
+\keyword{internal}

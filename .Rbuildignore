@@ -10,3 +10,4 @@ $run_dev.*
 ^Dockerfile$
 ^data_test$
 ^data_test/.*
+^\.gitlab-ci\.yml$

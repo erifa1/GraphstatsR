@@ -11,6 +11,7 @@
 #' @importFrom ggstatsplot ggbetweenstats
 #' @importFrom car Boxplot
 #' @importFrom waiter useWaiter waiter_show waiter_hide spin_fading_circles
+#' @importFrom htmltools tags em div
 #' @import PMCMRplus
 
 tmpdir <- tempdir()

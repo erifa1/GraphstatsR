@@ -12,3 +12,4 @@ is_outlier(x)
 \description{
 Detect outlier from numeric vector
 }
+\keyword{internal}
