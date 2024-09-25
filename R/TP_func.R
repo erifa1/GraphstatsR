@@ -1,14 +1,29 @@
 #' @title Theoretical abundance calculation function
+#' @name TP_func
 #' @description This function calculates the theoretical abundance of isotopologues
 #' 
 #' @param path Path to the input file (TSV format)
 #' @param p Natural abundance of 13C (default = 0.513)
+#' @param outpath Path to the output directory (default = "./MSPT_out/"), if NULL, no output is generated
 #' @return 
+#' A list containing the following elements:
 #' 
-#' @import rio
+#' \itemize{
+#' 
+#' \item \strong{Table} A data frame containing the results of the calculations (sample, metabolite, isotopologue, area, Total_Area, Ratio, Theoretical_Ratios, Mean_Ratios, Mean_Ratios_SD, Thresholds, Bias (%), Mean Bias (%), Mean Bias SD (%))
+#' \item \strong{figures} A list of ggplot objects containing the barplots of the experimental and theoretical isotopologue fraction of each metabolite with error bars
+#'}
+#'
+#' @examples 
+#' \dontrun{
+#' file <- glue::glue(system.file(package = "graphstatsr"), "/dataset/MSPT_test.tsv")
+#' res <- TP_func(path = file, outpath = NULL)
+#' str(res, max.level = 2)
+#' }
+#' 
 #' @import dplyr
 #' @import ggplot2
-#' @import ggrepel
+#' @importFrom ggrepel geom_text_repel
 #' @import openxlsx
 
 library(rio)
@@ -23,7 +38,9 @@ theoretical_abundances <- function(n, k, p){
   return(res)
 }
 
-TP_func <- function(path, p=0.513){
+TP_func <- function(path, p=0.513, outpath = "./MSPT_out/"){
+  LL <- list()
+
   input_data <- rio::import(path)
   # Calculate CID and theoretical isotopologue fraction
   th_data <- input_data %>% mutate(Miso = as.factor(glue::glue("M{stringr::str_pad(input_data$isotopologue, 2, pad = '0')}"))) %>%
@@ -60,23 +77,23 @@ TP_func <- function(path, p=0.513){
   addWorksheet(wb, "sheet1")
   writeData(wb, sheet = "sheet1", x = OutA3)
   conditionalFormatting(wb, "sheet1",
-                        cols = 12, # NumÃ©ro de colonne Ã  colorer
-                        rows = 2:nrow(OutA3), # Plage de lignes Ã  colorer
-                        rule = ">=5", # RÃ¨gle de condition (par exemple, supÃ©rieur Ã  15)
+                        cols = 12,
+                        rows = 2:nrow(OutA3),
+                        rule = ">=5",
                         style = createStyle(fontColour = "#C01B17", bgFill = "#FFC7CE")
   )
   conditionalFormatting(wb, "sheet1",
-                        cols = 12, # NumÃ©ro de colonne Ã  colorer
-                        rows = 2:(nrow(OutA3)+1), # Plage de lignes Ã  colorer
-                        rule = "<5", # RÃ¨gle de condition (par exemple, supÃ©rieur Ã  15)
+                        cols = 12,
+                        rows = 2:(nrow(OutA3)+1),
+                        rule = "<5",
                         style = createStyle(fontColour = "#006432", bgFill = "#C6EFCE")
   )
   style_bold <- createStyle(textDecoration = "bold")
   addStyle(wb, sheet = "sheet1", style = style_bold, rows = 1, cols = 1:ncol(OutA3), gridExpand = TRUE)
-  saveWorkbook(wb, "TMP_flux-valid-exploris240-AA-C13_res_bias.xlsx", overwrite = TRUE)
-
+  
   # Barplot of experimental and theoretical isotopologue fraction of each metabolite with error bars
-  pdf("rplot.pdf")
+
+  # pdf("rplot.pdf")
   for(metabo in unique(OutA3$metabolite)){
     p2_bar <- pivot_meanA3 %>% filter(metabolite == metabo) %>%
       ggplot(aes(x = Miso, y = Value, fill = Type)) +
@@ -90,10 +107,25 @@ TP_func <- function(path, p=0.513){
       labs(fill = "") + scale_fill_manual(values = c("#1f77b4", "#ff7f0e"),
                                           labels = c("Experimental", "Theory"))
     print(p2_bar)
+    LL$figures[[metabo]] <- p2_bar
   }
-  dev.set(which = 2)
-  dev.copy(which = 4)
-  dev.off()
+
+  # OUTPUT
+  if(!is.null(outpath) && outpath != ""){
+    dir.create(outpath, showWarnings = FALSE, recursive = TRUE)
+
+    ml <- marrangeGrob(test$figures, nrow=2, ncol=1)
+    ggsave(glue::glue("{outpath}/TP_figures.pdf"), ml , width = 11, height = 8, dpi = 200)
+
+    write.csv(OutA3, glue::glue("{outpath}/TP_results.csv"), row.names = FALSE)
+
+    saveWorkbook(wb, glue::glue("{outpath}/TP_results.xlsx"), overwrite = TRUE)
+  }
+
+  LL$Table <- OutA3
+
+  return(LL)
+
 }
-TP_func(path = "c:/Users/kouakou/Documents/MSPT/flux-valid-exploris240-AA-C13_res.tsv")
+
 

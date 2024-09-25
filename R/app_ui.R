@@ -44,7 +44,8 @@ app_ui <- function(request) {
                           startExpanded = TRUE,
                           menuSubItem('Input data', tabName = 'inputs-tab2'),
                           # menuSubItem('ACP', tabName = 'acp-tab2'),
-                          menuSubItem('Plots', tabName = 'plot-tab2')
+                          menuSubItem('Plots', tabName = 'plot-tab2'),
+                          menuSubItem('MSPT', tabName = 'MSPT_1')
                           )
                     )
                   ),
@@ -66,6 +67,9 @@ app_ui <- function(request) {
                       ),
                       tabItem(tabName = 'plot-tab2',
                               mod_plots_isot_ui("plot-tab2")
+                      ),
+                      tabItem(tabName = 'MSPT_1',
+                              mod_MSPT_ui("MSPT_1")
                       )
 
                     )

@@ -24,5 +24,5 @@ app_server <- function( input, output, session ) {
 
   mod_inputs_isot_server("inputs_2", session=session, r=r)
   mod_plots_isot_server("plot-tab2", session=session, r=r)
-  
+  mod_MSPT_server("MSPT_1", session=session, r=r)
 }
