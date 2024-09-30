@@ -1,5 +1,5 @@
 #' @title Theoretical abundance calculation function
-#' @name TP_func
+#' @name MSPT_fun
 #' @description This function calculates the theoretical abundance of isotopologues
 #' 
 #' @param path Path to the input file (TSV format)
@@ -17,7 +17,7 @@
 #' @examples 
 #' \dontrun{
 #' file <- glue::glue(system.file(package = "graphstatsr"), "/dataset/MSPT_test.tsv")
-#' res <- TP_func(path = file, outpath = NULL)
+#' res <- MSPT_fun(path = file, outpath = NULL)
 #' str(res, max.level = 2)
 #' }
 #' 
@@ -25,20 +25,12 @@
 #' @import ggplot2
 #' @importFrom ggrepel geom_text_repel
 #' @import openxlsx
-
-library(rio)
-library(dplyr)
-library(ggplot2)
-library(ggrepel)
-library(openxlsx)
+#' @export
 
 
-theoretical_abundances <- function(n, k, p){
-  res = choose(n, k) * (p ^ k) * ((1 - p) ^ (n - k))
-  return(res)
-}
 
-TP_func <- function(path, p=0.513, outpath = "./MSPT_out/"){
+
+MSPT_fun <- function(path, p=0.513, outpath = "./MSPT_out/"){
   LL <- list()
 
   input_data <- rio::import(path)
@@ -114,7 +106,7 @@ TP_func <- function(path, p=0.513, outpath = "./MSPT_out/"){
   if(!is.null(outpath) && outpath != ""){
     dir.create(outpath, showWarnings = FALSE, recursive = TRUE)
 
-    ml <- marrangeGrob(test$figures, nrow=2, ncol=1)
+    ml <- marrangeGrob(LL$figures, nrow=2, ncol=1)
     ggsave(glue::glue("{outpath}/TP_figures.pdf"), ml , width = 11, height = 8, dpi = 200)
 
     write.csv(OutA3, glue::glue("{outpath}/TP_results.csv"), row.names = FALSE)
@@ -128,4 +120,12 @@ TP_func <- function(path, p=0.513, outpath = "./MSPT_out/"){
 
 }
 
+
+
+
+
+theoretical_abundances <- function(n, k, p){
+  res = choose(n, k) * (p ^ k) * ((1 - p) ^ (n - k))
+  return(res)
+}
 
