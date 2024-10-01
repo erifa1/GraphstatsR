@@ -5,6 +5,9 @@
 #' @param path Path to the input file (TSV format)
 #' @param p Natural abundance of 13C (default = 0.513)
 #' @param outpath Path to the output directory (default = "./MSPT_out/"), if NULL, no output is generated
+#' @param minCID Minimum value of CID to be considered (default = 0.02)
+#' @param maxBias Maximum value of bias to be considered (default = 5)
+#' @param plotLowCID Logical, if TRUE, plot the isotopologues with CID < minCID (default = FALSE)
 #' @return 
 #' A list containing the following elements:
 #' 
@@ -30,7 +33,7 @@
 
 
 
-MSPT_fun <- function(path, p=0.513, outpath = "./MSPT_out/"){
+MSPT_fun <- function(path, p=0.513, outpath = "./MSPT_out/", minCID = 0.02, maxBias = 5, plotLowCID = FALSE){
   LL <- list()
 
   input_data <- rio::import(path)
