@@ -1,6 +1,6 @@
-#' @title Theoretical abundance calculation function
+#' @title MSPT function
 #' @name MSPT_fun
-#' @description This function calculates the theoretical abundance of isotopologues
+#' @description This function calculates the isotopologue fraction of each metabolite and compares it with the theoretical isotopologue fraction. It generates a table with the results and barplots of the experimental and theoretical isotopologue fraction of each metabolite with error bars.
 #' 
 #' @param path Path to the input file (TSV format)
 #' @param p Natural abundance of 13C (default = 0.513)
@@ -33,7 +33,7 @@
 
 
 
-MSPT_fun <- function(path, p=0.513, outpath = "./MSPT_out/", minCID = 0.02, maxBias = 5, plotLowCID = FALSE){
+MSPT_fun <- function(path, p=0.513, outpath = "./MSPT_out/", minCID = 0.02, maxBias = 5){
   LL <- list()
 
   input_data <- rio::import(path)
@@ -49,14 +49,14 @@ MSPT_fun <- function(path, p=0.513, outpath = "./MSPT_out/", minCID = 0.02, maxB
   # Calculate bias and cancel value when CID < 0.02
   A3 <- th_data %>%
     mutate(bias = abs(CID - theoretical_isotopologue_fraction) * 100, .after = theoretical_isotopologue_fraction)  %>%
-    mutate(bias = ifelse(CID < 0.02, NA, bias)) %>% group_by(sample, metabolite) %>%
+    mutate(bias = ifelse(CID < minCID, NA, bias)) %>% group_by(sample, metabolite) %>%
     mutate(meanBias = mean(bias, na.rm = TRUE), sdBias = sd(bias, na.rm = TRUE), .after = bias)
   meanA3 <- A3 %>% group_by(metabolite, Miso) %>%
     summarise(MeanBias = mean(bias, na.rm = TRUE), SDBias = sd(bias, na.rm = TRUE),
               MeanCID = mean(CID, na.rm = TRUE), SDCID = sd(CID, na.rm = TRUE),
               MeanThCID = mean(theoretical_isotopologue_fraction, na.rm = TRUE),
               SDThCID = sd(theoretical_isotopologue_fraction, na.rm = TRUE))
-  #  Here filter (or not) cid < 0.02 for ploting
+  #  Here filter (or not) cid < 0.02 for ploting / postponed dev 
   pivot_meanA3 <- meanA3 %>% tidyr::pivot_longer(cols = c(MeanCID, MeanThCID),
                                                  names_to = "Type", values_to = "Value") %>%
     mutate(SDCID = ifelse(Type == "MeanThCID", NA, SDCID))
@@ -65,7 +65,7 @@ MSPT_fun <- function(path, p=0.513, outpath = "./MSPT_out/", minCID = 0.02, maxB
     mutate(Total_Area = sum(area), .after = area) %>%
     group_by(metabolite, Miso) %>%
     mutate(Mean_Ratios = mean(CID, na.rm = TRUE), Mean_Ratios_SD = sd(CID, na.rm = TRUE), .after = theoretical_isotopologue_fraction) %>%
-    mutate(Theshold = ifelse(CID > 0.02, 1, 0), .after = Mean_Ratios_SD) #%>%
+    mutate(Theshold = ifelse(CID > minCID, 1, 0), .after = Mean_Ratios_SD) #%>%
   # as.data.frame() %>% head()
   names(OutA3) <- c("sample",	"metabolite",	"isotopologue",	"area",	"Total_Area",	"Ratio",	"Theoretical_Ratios",	"Mean_Ratios",	"Mean_Ratios_SD",	"Thresholds",	"Bias (%)",	"Mean Bias (%)",	"Mean Bias SD (%)")
   wb <- createWorkbook()
@@ -74,13 +74,13 @@ MSPT_fun <- function(path, p=0.513, outpath = "./MSPT_out/", minCID = 0.02, maxB
   conditionalFormatting(wb, "sheet1",
                         cols = 12,
                         rows = 2:nrow(OutA3),
-                        rule = ">=5",
+                        rule = glue::glue(">={maxBias}"),
                         style = createStyle(fontColour = "#C01B17", bgFill = "#FFC7CE")
   )
   conditionalFormatting(wb, "sheet1",
                         cols = 12,
                         rows = 2:(nrow(OutA3)+1),
-                        rule = "<5",
+                        rule = glue::glue("<{maxBias}"),
                         style = createStyle(fontColour = "#006432", bgFill = "#C6EFCE")
   )
   style_bold <- createStyle(textDecoration = "bold")
@@ -118,6 +118,7 @@ MSPT_fun <- function(path, p=0.513, outpath = "./MSPT_out/", minCID = 0.02, maxB
   }
 
   LL$Table <- OutA3
+  LL$workbook <- wb
 
   return(LL)
 
@@ -126,6 +127,19 @@ MSPT_fun <- function(path, p=0.513, outpath = "./MSPT_out/", minCID = 0.02, maxB
 
 
 
+#' @title Theoretical abundance calculation function
+#' @name theoretical_abundances
+#' @description Calcuate the theoretical abundance of isotopologues
+#' 
+#' @param n Number of carbons in the molecule
+#' @param k Number of the isotopologue
+#' @param p Abundance of labeled precursor
+#' 
+#' @return Theoretical abundance of isotopologues
+#' @keywords internal
+#' #' @examples 
+#' res <- theoretical_abundances(10, 0:10, 0.513); res
+#' plot(res)
 
 theoretical_abundances <- function(n, k, p){
   res = choose(n, k) * (p ^ k) * ((1 - p) ^ (n - k))

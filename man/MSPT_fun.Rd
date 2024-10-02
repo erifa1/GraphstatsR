@@ -2,9 +2,9 @@
 % Please edit documentation in R/MSPT_fun.R
 \name{MSPT_fun}
 \alias{MSPT_fun}
-\title{Theoretical abundance calculation function}
+\title{MSPT function}
 \usage{
-MSPT_fun(path, p = 0.513, outpath = "./MSPT_out/")
+MSPT_fun(path, p = 0.513, outpath = "./MSPT_out/", minCID = 0.02, maxBias = 5)
 }
 \arguments{
 \item{path}{Path to the input file (TSV format)}
@@ -12,6 +12,12 @@ MSPT_fun(path, p = 0.513, outpath = "./MSPT_out/")
 \item{p}{Natural abundance of 13C (default = 0.513)}
 
 \item{outpath}{Path to the output directory (default = "./MSPT_out/"), if NULL, no output is generated}
+
+\item{minCID}{Minimum value of CID to be considered (default = 0.02)}
+
+\item{maxBias}{Maximum value of bias to be considered (default = 5)}
+
+\item{plotLowCID}{Logical, if TRUE, plot the isotopologues with CID < minCID (default = FALSE)}
 }
 \value{
 A list containing the following elements:
@@ -23,7 +29,7 @@ A list containing the following elements:
 }
 }
 \description{
-This function calculates the theoretical abundance of isotopologues
+This function calculates the isotopologue fraction of each metabolite and compares it with the theoretical isotopologue fraction. It generates a table with the results and barplots of the experimental and theoretical isotopologue fraction of each metabolite with error bars.
 }
 \examples{
 \dontrun{
