@@ -21,7 +21,8 @@ mod_MSPT_ui <- function(id){
         ),
         column(4,
           numericInput(ns("maxBIAS"), "Max bias threshold:", 5, min = 0, max = 100)
-        )
+        ),
+        actionButton(ns("go_mspt"), "Run analysis", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
 
       ),
       box(title = "Preview:", width = 12, status = "warning", solidHeader = TRUE,
@@ -42,18 +43,27 @@ mod_MSPT_server <- function(id, session=session, r=r){
     r_values <- reactiveValues(res = NULL)
 
 
+    res_mspt <- eventReactive(input$go_mspt, {
+      req(input$file)
+      print("MSPT function")
+      showNotification("Processing, please wait.", duration = 10, type = "message")
+      res <- r_values$res <- MSPT_fun(input$file$datapath, p = input$p1, outpath = NULL, minCID = input$minCID, maxBias = input$maxBIAS)
+      res
+    })
 
     output$contents <- renderTable({
-      req(input$file)
-      res <- r_values$res <- MSPT_fun(input$file$datapath, p = input$p1, outpath = NULL, minCID = input$minCID, maxBias = input$maxBIAS)
+      req(res_mspt())
+      print("Rendering table")
+      res <- res_mspt()
       head(res$Table)
 
     })
 
 
     output$plot1 <- renderPlot({
-      req(r_values$res)
-      res <- r_values$res
+      req(res_mspt())
+      print("Rendering plot")
+      res <- res_mspt()
       res$figures[[1]]
 
     })
@@ -65,6 +75,7 @@ mod_MSPT_server <- function(id, session=session, r=r){
         req(r_values$res)
         res <- r_values$res
 
+        showNotification("Creating archive, please wait.", duration = 10, type = "message")
         dir.create(glue::glue("{tmpdir}/MSPT_{systim}/"), recursive = TRUE)
 
         write.csv(res$Table, glue::glue("{tmpdir}/MSPT_{systim}/TP_results.csv"), sep=",", row.names = FALSE)
