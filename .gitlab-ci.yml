@@ -28,7 +28,7 @@ install_linux:
   - apt-get install -y git libcurl4-openssl-dev libssl-dev libxml2-dev libgmp3-dev libmpfr-dev cmake zlib1g-dev
   script:
     - R -e 'install.packages(c("remotes", "devtools"), lib = "installed_deps")'
-    - R -e 'options(remotes::install_local(upgrade = "never", dependencies = TRUE, lib = "installed_deps")' 
+    - R -e 'remotes::install_local(upgrade = "never", dependencies = TRUE, lib = "installed_deps")' 
     - R -e 'devtools::check()'
   artifacts:
     paths:
