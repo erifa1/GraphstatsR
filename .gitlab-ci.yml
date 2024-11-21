@@ -1,16 +1,39 @@
 stages:
   - install
 
+cache:
+  key: global-cache
+  paths:
+  - installed_deps/
+  when: always
+
 variables:
-  R_VERSION: "4.3.3"
+  R_VERSION: "4.4.1"
+  GITHUB_PAT: $CI_GITHUB_TOKEN
 
 install_linux:
+  tags:
+    - mia6
   stage: install
   image: rocker/r-ver:${R_VERSION}
   before_script:
+  - mkdir -p installed_deps
+  - echo 'R_LIBS="installed_deps"' > .Renviron
+  - echo 'R_LIBS_USER="installed_deps"' >> .Renviron
+  - echo 'R_LIBS_SITE="installed_deps"' >> .Renviron
+  - echo "GITHUB_PAT=${GITHUB_PAT}" >> .Renviron
+  - cat .Renviron
+  - ls installed_deps
   - apt-get update -qq && apt-get install -y --no-install-recommends
   - apt-get install -y git libcurl4-openssl-dev libssl-dev libxml2-dev libgmp3-dev libmpfr-dev cmake zlib1g-dev
   script:
-    - R -e 'install.packages(c("remotes", "devtools"))'
-    - R -e 'remotes::install_gitlab(repo = "etienne.rifa/graphstats", host = "forgemia.inra.fr")'
+    - R -e 'install.packages(c("remotes", "devtools"), lib = "installed_deps")'
+    - R -e 'options(remotes::install_local(upgrade = "never", dependencies = TRUE, lib = "installed_deps")' 
     - R -e 'devtools::check()'
+  artifacts:
+    paths:
+      - installed_deps
+      - .Renviron
+    expire_in: 7 days
+  only:
+  - master
