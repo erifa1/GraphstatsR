@@ -43,7 +43,7 @@ Suggests:
     spelling,
     testthat
 Remotes:
-    bioc::3.10/rhdf5
+    bioc::3.20/rhdf5
 Config/testthat/edition: 3
 Encoding: UTF-8
 Language: en-US

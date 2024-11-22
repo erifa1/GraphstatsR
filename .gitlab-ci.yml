@@ -27,13 +27,15 @@ install_linux:
   - apt-get update -qq && apt-get install -y --no-install-recommends
   - apt-get install -y git libcurl4-openssl-dev libssl-dev libxml2-dev libgmp3-dev libmpfr-dev cmake zlib1g-dev
   script:
-    - R -e 'install.packages(c("remotes", "devtools"), lib = "installed_deps")'
-    - R -e 'remotes::install_local(upgrade = "never", dependencies = TRUE, lib = "installed_deps")' 
-    - R -e 'devtools::check()'
+    - R -e 'install.packages(c("remotes", "devtools","BiocManager", "rcmdcheck"), lib = "installed_deps")'
+    - R -e 'BiocManager::install(version = "3.20", upgrade = FALSE, update = FALSE)'
+    - R -e 'options(repos = BiocManager::repositories()); remotes::install_local(upgrade = "never", dependencies = TRUE, lib = "installed_deps")' 
+    - R -e 'rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"), error_on = "error", check_dir = "check")'
   artifacts:
     paths:
       - installed_deps
+      - check
       - .Renviron
     expire_in: 7 days
   only:
-  - master
+  - cicd
