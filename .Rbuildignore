@@ -11,3 +11,7 @@ $run_dev.*
 ^data_test$
 ^data_test/.*
 ^\.gitlab-ci\.yml$
+^installed_deps$
+^installed_deps/.*
+^builds$
+^builds/.*
