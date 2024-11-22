@@ -13,16 +13,24 @@ mod_MSPT_ui <- function(id){
     fluidRow(
       box(title = "Settings:", width = 7, status = "warning", solidHeader = TRUE,
         fileInput(ns("file"), "Choose a file (csv, tsv, xlsx)", accept = c(".csv", ".tsv", ".txt", ".xlsx", ".xls")),
-        column(4,
-          numericInput(ns("p1"), "Value of p:", 0.513, min = 0, max = NA)
+        fixedRow(
+          column(4,
+            numericInput(ns("p1"), "Value of p:", 0.513, min = 0, max = NA)
+          ),
+          column(4,
+            numericInput(ns("minCID"), "Min CID:", 0.02, min = 0, max = NA)
+          ),
+          column(4,
+            numericInput(ns("maxBIAS"), "Max bias threshold:", 5, min = 0, max = 100)
+          )
         ),
-        column(4,
-          numericInput(ns("minCID"), "Min CID:", 0.02, min = 0, max = NA)
+        fixedRow(
+          column(4,
+            selectInput(ns("feat1"), label = "Feature to preview:", choices = "")
+          )
         ),
-        column(4,
-          numericInput(ns("maxBIAS"), "Max bias threshold:", 5, min = 0, max = 100)
-        ),
-        actionButton(ns("go_mspt"), "Run analysis", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
+        
+        actionButton(ns("go_mspt"), "Run complete analysis", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469")
 
       ),
       box(title = "Preview:", width = 12, status = "warning", solidHeader = TRUE,
@@ -41,6 +49,17 @@ mod_MSPT_server <- function(id, session=session, r=r){
   moduleServer( id, function(input, output, session){
     ns <- session$ns
     r_values <- reactiveValues(res = NULL)
+
+
+    observe({
+      req(input$file)
+
+      input_data <- rio::import(input$file$datapath)
+
+      updateSelectInput(session, "feat1",
+                  choices = unique(input_data[,"metabolite"]),
+                  selected = unique(input_data[,"metabolite"])[1])
+    })
 
 
     res_mspt <- eventReactive(input$go_mspt, {

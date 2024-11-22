@@ -33,10 +33,19 @@
 
 
 
-MSPT_fun <- function(path, p=0.513, outpath = "./MSPT_out/", minCID = 0.02, maxBias = 5){
+MSPT_fun <- function(path, p=0.513, outpath = "./MSPT_out/", minCID = 0.02, maxBias = 5, feature = NULL){
   LL <- list()
 
   input_data <- rio::import(path)
+
+  # Select one metabolite to preview
+  if(!is.null(feature)){
+    if (!feature %in% input_data$metabolite) {
+      stop(glue::glue("Metabolite {feature} not found in the input data. Choose in {paste(unique(input_data$metabolite), collapse = ', ')}"))
+    }
+    input_data <- input_data %>% filter(metabolite == feature)
+  }
+
   # Calculate CID and theoretical isotopologue fraction
   th_data <- input_data %>% mutate(Miso = as.factor(glue::glue("M{stringr::str_pad(input_data$isotopologue, 2, pad = '0')}"))) %>%
     group_by(sample, metabolite) %>%
