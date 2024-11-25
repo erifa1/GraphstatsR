@@ -10,6 +10,10 @@
 
 SK8img <- base64enc::dataURI(file=system.file(file.path('app/www', 'SK8.png'), package='graphstatsr'))
 
+description <- read.dcf(system.file("DESCRIPTION", package = "graphstatsr"))
+package_name <- description[1, "Package"]
+package_version <- description[1, "Version"]
+
 app_ui <- function(request) {
   tagList(
     # Leave this function for adding external resources
@@ -20,7 +24,7 @@ app_ui <- function(request) {
     # )
     dashboardPage(skin = "red",
                   dashboardHeader(
-                    title = "GraphStatsR 2.1.4",
+                    title = glue::glue("GraphStatsR {package_version}"),
 
                     tags$li(class="dropdown",tags$a("Hosted by", img(src = SK8img,
                     title = "SK8", height = "20px"), headerText = "Source code",href="https://sk8.inrae.fr/", target="_blank")),
