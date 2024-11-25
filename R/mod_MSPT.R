@@ -100,6 +100,7 @@ mod_MSPT_server <- function(id, session=session, r=r){
       filename = "MSPT.zip",
       content = function(file) {
 
+        showNotification("Processing, please wait.", duration = 10, type = "message")
         res <- r_values$res <- MSPT_fun(input$file$datapath, p = input$p1, outpath = NULL, minCID = input$minCID, maxBias = input$maxBIAS)
         res
 
