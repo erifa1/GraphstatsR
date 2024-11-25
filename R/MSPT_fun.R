@@ -37,6 +37,7 @@ MSPT_fun <- function(path, p=0.513, outpath = "./MSPT_out/", minCID = 0.02, maxB
   LL <- list()
 
   input_data <- rio::import(path)
+  input_data$metabolite <- as.factor(input_data$metabolite)
 
   # Select one metabolite to preview
   if(!is.null(feature)){
