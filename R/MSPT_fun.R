@@ -7,7 +7,8 @@
 #' @param outpath Path to the output directory (default = "./MSPT_out/"), if NULL, no output is generated
 #' @param minCID Minimum value of CID to be considered (default = 0.02)
 #' @param maxBias Maximum value of bias to be considered (default = 5)
-#' @param plotLowCID Logical, if TRUE, plot the isotopologues with CID < minCID (default = FALSE)
+#' @param plotLowCID Logical, if TRUE, plot the isotopologues with CID < minCID (default = FALSE) (not implemented yet)
+#' @param feature Name of the metabolite to preview (default = NULL)
 #' @return 
 #' A list containing the following elements:
 #' 

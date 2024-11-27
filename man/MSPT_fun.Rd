@@ -4,7 +4,14 @@
 \alias{MSPT_fun}
 \title{MSPT function}
 \usage{
-MSPT_fun(path, p = 0.513, outpath = "./MSPT_out/", minCID = 0.02, maxBias = 5)
+MSPT_fun(
+  path,
+  p = 0.513,
+  outpath = "./MSPT_out/",
+  minCID = 0.02,
+  maxBias = 5,
+  feature = NULL
+)
 }
 \arguments{
 \item{path}{Path to the input file (TSV format)}
@@ -17,7 +24,9 @@ MSPT_fun(path, p = 0.513, outpath = "./MSPT_out/", minCID = 0.02, maxBias = 5)
 
 \item{maxBias}{Maximum value of bias to be considered (default = 5)}
 
-\item{plotLowCID}{Logical, if TRUE, plot the isotopologues with CID < minCID (default = FALSE)}
+\item{feature}{Name of the metabolite to preview (default = NULL)}
+
+\item{plotLowCID}{Logical, if TRUE, plot the isotopologues with CID < minCID (default = FALSE) (not implemented yet)}
 }
 \value{
 A list containing the following elements:
