@@ -1523,13 +1523,13 @@
     },
     "graphstatsr": {
       "Package": "graphstatsr",
-      "Version": "2.1.4",
+      "Version": "2.2.0",
       "Source": "GitLab",
       "RemoteType": "gitlab",
       "RemoteHost": "forgemia.inra.fr",
       "RemoteRepo": "graphstats",
       "RemoteUsername": "etienne.rifa",
-      "RemoteSha": "7005b551b5d61339f2e1e463950d8d33b37506ed",
+      "RemoteSha": "1ce7a9cc0459c654aaec7dc9cca181fe75ffac8d",
       "Requirements": [
         "DT",
         "PMCMRplus",
@@ -1549,6 +1549,7 @@
         "graphics",
         "gridExtra",
         "htmltools",
+        "openxlsx",
         "plotly",
         "reshape2",
         "rhdf5",
@@ -1565,7 +1566,7 @@
         "tidyr",
         "waiter"
       ],
-      "Hash": "8b0aff7eef2eb8666c37e820143e0e80"
+      "Hash": "55c58ffd3c852172637dd198948a2a37"
     },
     "gridExtra": {
       "Package": "gridExtra",

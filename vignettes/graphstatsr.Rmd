@@ -1,0 +1,53 @@
+---
+title: "graphstatsr"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{graphstatsr}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+# Module Easy stats
+
+This module allows users to carry out descriptive analyses like PCA, and boxplots associated with statistical tests
+
+## Input Data
+
+Users can drag and drops quantification file and metadata file in the corresponding fields. 
+
+Filters and tranformations can be applied on dataset. 
+
+Merge datasets button makes the dataset ready for further analysis.
+
+
+## PCA
+
+In this submodule, the dataset is preprocessed to handle missing values. User can choose which component to display.
+
+
+## Boxplots
+
+The boxplots submodule allows user 
+
+
+# Isoplot
+
+
+## Input Data
+
+
+## Plots
+
+
+
+## MSPT
+
+

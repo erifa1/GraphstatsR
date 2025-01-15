@@ -1,0 +1,17 @@
+template:
+  bootstrap: 5
+  package: pkgdown
+
+home:
+  title: graphstatsR
+
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, tutorials, news]
+    right: [search, gitlab]
+  components:
+    gitlab:
+      icon: fa-gitlab
+      href: https://forgemia.inra.fr/umrf/ranomaly
+      aria-label: GitLab repository

@@ -41,6 +41,8 @@ Imports:
     tidyr,
     waiter
 Suggests: 
+    knitr,
+    rmarkdown,
     spelling,
     testthat
 Remotes:
@@ -50,3 +52,4 @@ Encoding: UTF-8
 Language: en-US
 LazyData: true
 RoxygenNote: 7.3.2
+VignetteBuilder: knitr
