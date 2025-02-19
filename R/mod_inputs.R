@@ -277,8 +277,21 @@ mod_inputs_server <- function(id, r = r, session = session){
 
 
       data2 <- reactive({
-        r_values$imported2 <- imported2$data()
-        imported2$data()
+        r_values$imported2 <- dataset <- imported2$data()
+
+        if(!is.null(dataset)){
+          test_factors <- sapply(dataset %>% mutate_if(is.character, as.factor), nlevels)
+          if( any(test_factors > 1) & any(test_factors < ncol(dataset))  ){
+            dataset
+          }else{
+            shinyalert(title = "Oops", text=glue::glue("The metadata file must contain at least one column with multiple levels. Download the template metadata file based on the features table and retain the dummy column 'factor_example'"), type='error')
+            return(data.frame())
+          }
+        }else{
+          dataset
+        }
+
+
       })
 
       res_filter2 <- filter_data_server(

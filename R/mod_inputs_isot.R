@@ -326,6 +326,11 @@ mod_inputs_isot_server <- function(id, r = r, session = session){
         }
 
         metadata1 <- res_filter2$filtered()
+        
+        if (!"sample" %in% colnames(metadata1)) {
+          colnames(metadata1)[1] <- "sample"
+          showNotification("The first column of metadata has been renamed 'sample'", type = "warning", duration = 5)
+        }
 
         if(length(unique(metadata1$sample)) != length(metadata1$sample)){
             print("non unique sample id")
@@ -348,6 +353,11 @@ mod_inputs_isot_server <- function(id, r = r, session = session){
         # print(mt1$sample)
         
         ds0 <- feat1 %>% filter(!sample %in% samplenames_out) #select(-samplenames_out)
+        
+        if (!is.numeric(ds0$corrected_area)) {
+          showNotification("The 'corrected_area' column must be numeric.", type = "error", duration = 5)
+          return(data.frame())
+        }
 
           Calcul <- ds0 %>% mutate(Miso = as.factor(glue::glue("M{stringr::str_pad(ds0$isotopologue, 2, pad = '0')}"))) %>%
           mutate(Area_Iso = corrected_area * isotopologue) %>% group_by(sample, metabolite) %>% 

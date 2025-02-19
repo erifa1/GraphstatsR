@@ -34,8 +34,11 @@ You can install the released version of graphstats from [this
 repository](https://forgemia.inra.fr/etienne.rifa/graphstats) with:
 
 ``` r
-install.packages("remotes")
-remotes::install_gitlab(repo = "etienne.rifa/graphstats", host = "forgemia.inra.fr")
+install.packages("renv")
+options(renv.config.gitlab.host = "https://forgemia.inra.fr")
+
+renv::install("gitlab::etienne.rifa/graphstats@master")
+
 ```
 
 ## To run Shiny app in R
