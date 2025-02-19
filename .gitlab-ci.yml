@@ -1,5 +1,6 @@
 stages:
   - install
+  - wiki
 
 cache:
   key: global-cache
