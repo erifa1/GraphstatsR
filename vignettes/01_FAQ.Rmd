@@ -1,0 +1,52 @@
+---
+title: "FAQ"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{graphstatsr}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# 🤔 Frequently Asked Question
+
+## How do I install GraphstatsR ?
+
+You just need to run these commands in R4.4.2 / Rstudio :
+
+```r
+install.packages("renv")
+options(renv.config.gitlab.host = "https://forgemia.inra.fr")
+
+renv::install("gitlab::etienne.rifa/graphstats@master")
+```
+
+On Windows [Rtools](https://cran.r-project.org/bin/windows/Rtools/) and [git](https://git-scm.com/download/win) are required.
+
+
+## Where can I find a toy data set for GraphstatsR ?
+
+Locally on your computer in the path returned by this command, in the **dataset** subfolder:
+
+```r
+system.file(package = "graphstatsr")
+```
+
+or on the [GraphstatsR repository](https://forgemia.inra.fr/etienne.rifa/graphstats/-/tree/master/inst/dataset?ref_type=heads).
+
+
+## I have issues with the input tables. How can I fix them?
+
+Errors may occur when tables modified in Microsoft Excel introduce inconsistent encoding formats. We recommend using [LibreOffice](https://fr.libreoffice.org/download/telecharger-libreoffice/) to avoid such issues.
+
+## I have a super idea to improve this magnificient tool, where can I propose it ? 
+
+You can open a new issue [here](https://forgemia.inra.fr/etienne.rifa/graphstats/-/issues).
+
+

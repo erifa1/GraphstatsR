@@ -13,5 +13,5 @@ navbar:
   components:
     gitlab:
       icon: fa-gitlab
-      href: https://forgemia.inra.fr/umrf/ranomaly
+      href: https://forgemia.inra.fr/etienne.rifa/graphstats
       aria-label: GitLab repository

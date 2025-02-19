@@ -17,3 +17,7 @@ $run_dev.*
 ^installed_deps/.*
 ^builds$
 ^builds/.*
+^docs$
+^docs/.*
+^renv$
+^renv/.*
