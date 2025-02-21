@@ -6,6 +6,7 @@ cache:
   key: global-cache
   paths:
   - installed_deps/
+  - ~/.local/share/renv
   when: always
 
 variables:
