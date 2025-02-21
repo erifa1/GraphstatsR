@@ -9,4 +9,3 @@ data_test/
 Dockerfile
 docs/
 inst/doc
-renv/
