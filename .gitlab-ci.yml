@@ -38,7 +38,7 @@ install_linux:
       - .Renviron
     expire_in: 7 days
   only:
-  - docs
+  - master
 
 pages:
   stage: wiki
@@ -61,4 +61,4 @@ pages:
     paths:
     - public
   only:
-  - docs
+  - master

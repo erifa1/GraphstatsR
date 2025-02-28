@@ -13,7 +13,7 @@ Online instance here: https://graphstatsr.sk8.inrae.fr/
 
 ## Prerequisites
 
-R4.3.3 or upper is required (https://pbil.univ-lyon1.fr/CRAN/bin/)
+R4.4.2 or upper is required (https://pbil.univ-lyon1.fr/CRAN/bin/)
 
 
 * Linux
@@ -44,10 +44,6 @@ renv::install("gitlab::etienne.rifa/graphstats@master")
 ## To run Shiny app in R
 
 ``` r
-# To update app 
-remotes::install_gitlab(repo = "etienne.rifa/graphstats", host = "forgemia.inra.fr", upgrade = FALSE)
-
-# To run app
 library(graphstatsr)
 graphstatsr::run_app()
 ```
@@ -58,9 +54,5 @@ Features table and metadata files are available in the `dataset` folder to test 
 
 ```r
 dir( system.file("dataset/", package = "graphstatsr") )
-# "features_quanti_data.csv" "metadata_file.csv" # for Easy Stats
-
-# "isoplot_quantification_table.csv" "isoplot_metadata.csv" # for IsoPlot
-
 ```
 

@@ -38,7 +38,7 @@ Fixs:
 
 add new input modules with filters widgets (datamods package) add options for boxplots: coloring boxplots, custom y axis label, inform outliers or not, and reordering/stashing boxplot conditions (sortable package) modularizing code +debug 1.4.0
 
-# v1.3.2 
+# v1.3.2
 
 # v1.0.1
 
