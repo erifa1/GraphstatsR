@@ -151,8 +151,8 @@ mod_plots_isot_server <- function(id, r = r, session = session){
           cols2group <- c("metabolite", "Miso", input$group1)
 
           tab_plot4 <- mtab %>% group_by(across(all_of(cols2group))) %>% 
-            summarise(meanGroup = mean(isotopologue_fraction), sdGroup = sd(isotopologue_fraction),
-              meanGroupAbs = mean(corrected_area), sdGroupAbs = sd(corrected_area), .groups = "keep") %>% 
+            summarise(meanGroup = mean(isotopologue_fraction, na.rm = TRUE), sdGroup = sd(isotopologue_fraction, na.rm = TRUE),
+              meanGroupAbs = mean(corrected_area, na.rm = TRUE), sdGroupAbs = sd(corrected_area, na.rm = TRUE), .groups = "keep") %>% 
             arrange(as.character(Miso)) %>%
             arrange(across(c("metabolite",input$group1))) %>%
             group_by(across(c("metabolite",input$group1))) %>%
