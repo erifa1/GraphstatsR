@@ -152,7 +152,9 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
           tab_plot4 <- mtab %>% group_by(across(all_of(cols2group))) %>% 
             summarise(meanGroup = mean(isotopologue_fraction, na.rm = TRUE), sdGroup = sd(isotopologue_fraction, na.rm = TRUE),
-              meanGroupAbs = mean(corrected_area, na.rm = TRUE), sdGroupAbs = sd(corrected_area, na.rm = TRUE), .groups = "keep") %>% 
+              meanGroupAbs = mean(corrected_area, na.rm = TRUE), sdGroupAbs = sd(corrected_area, na.rm = TRUE), .groups = "keep",
+              n_valid = sum(!is.na(corrected_area))) %>% 
+            mutate(!!input$group1 := factor(paste0(.data[[input$group1]], " (n=", n_valid, ")"))) %>%
             arrange(as.character(Miso)) %>%
             arrange(across(c("metabolite",input$group1))) %>%
             group_by(across(c("metabolite",input$group1))) %>%
@@ -221,8 +223,9 @@ mod_plots_isot_server <- function(id, r = r, session = session){
         p1
       })
 
-    output$histo_Aire_enrC13 <- renderPlot({
-      req(r$merged2())
+    reactive_calcul <- reactive({
+      req(r$merged2(), input$sorted2, input$group1)
+      print("CALCUL")
       mtab <- r$merged2()
 
       fun <- glue::glue("
@@ -248,10 +251,15 @@ mod_plots_isot_server <- function(id, r = r, session = session){
           group_by(across(all_of(cols2group))) %>%
           summarise(MeanGroupArea = mean(MeanTotalArea, na.rm = TRUE), SDTotalArea = sd(MeanTotalArea, na.rm = TRUE), 
           MeanGroupEnrC13 = mean(MeanEnrC13, na.rm = TRUE), SDEnrC13 = sd(MeanEnrC13, na.rm = TRUE))
+    })
+
+
+    output$histo_Aire_enrC13 <- renderPlot({
+      req(reactive_calcul(), r$MeanSD_Area_EnrC13_per_compound, r$MeanSD_Area_EnrC13_per_compound_groups)
 
       if(input$group1 == "sample"){
 
-        tabhisto <- MeanSD_Area_EnrC13_per_compound %>% filter(metabolite == input$feat2)
+        tabhisto <- r$MeanSD_Area_EnrC13_per_compound %>% filter(metabolite == input$feat2)
 
         p3_bar <- p3_bar1 <- ggplot(tabhisto, aes(x = sample, y = MeanEnrC13)) +
               geom_bar(stat="identity", color="black", fill = "#b6bced",
@@ -273,7 +281,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
       }else{
 
-        tabhisto2 <- MeanSD_Area_EnrC13_per_compound_groups %>% filter(metabolite == input$feat2)
+        tabhisto2 <- r$MeanSD_Area_EnrC13_per_compound_groups %>% filter(metabolite == input$feat2)
 
         p3_bar <- p3_bar_group <- ggplot(tabhisto2, aes(x = get(input$group1), y = MeanGroupEnrC13)) +
               geom_bar(stat="identity", color="black", fill = "#b6bced",
@@ -303,6 +311,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
     })
 
     output$histo_Aire_enrC13_allFeat_1group <- renderPlot({
+      req(r$MeanSD_Area_EnrC13_per_compound)
 
       # pour chaque condition  metabolite en x
       MeanSD_Area_EnrC13_per_compound <- r$MeanSD_Area_EnrC13_per_compound
@@ -452,6 +461,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
             col2 <- rev(col1)
             names(col2) <- levels(tab_plot4$Miso)
+         
         
             for(i in unique(mtab$metabolite)){
               print(i)
@@ -461,7 +471,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
                     theme_bw() + labs(fill='') + ggtitle(glue::glue("{i} mean CID by '{input$group1}' factor")) +
                     xlab("") + ylab("Mean Isotopologue fraction") +
                     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) + 
-                    geom_linerange(aes(ymin = SDPos-sdGroup, ymax = SDPos+sdGroup), width = 0.1, position = position_jitter(0.1))            
+                    geom_linerange(aes(ymin = SDPos-sdGroup, ymax = SDPos+sdGroup), width = 0.1, position = position_jitter(0.1))
 
                 }else{
                 LL[[i]] <- ggplot(as.data.frame(tab_plot4) %>% filter(metabolite == i), aes(fill=Miso, y=meanGroupAbs, x=get(input$group1))) + 
@@ -469,7 +479,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
                     theme_bw() + labs(fill='') + ggtitle(glue::glue("{i} mean Area by '{input$group1}' factor")) +
                     xlab("") + ylab("Mean corrected area") +
                     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) + 
-                    geom_linerange(aes(ymin = SDPosAbs-sdGroupAbs, ymax = SDPosAbs+sdGroupAbs), width = 0.1, position = position_jitter(0.1)) 
+                    geom_linerange(aes(ymin = SDPosAbs-sdGroupAbs, ymax = SDPosAbs+sdGroupAbs), width = 0.1, position = position_jitter(0.1))
 
                   }
 
