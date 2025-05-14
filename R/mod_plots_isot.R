@@ -154,7 +154,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
             summarise(meanGroup = mean(isotopologue_fraction, na.rm = TRUE), sdGroup = sd(isotopologue_fraction, na.rm = TRUE),
               meanGroupAbs = mean(corrected_area, na.rm = TRUE), sdGroupAbs = sd(corrected_area, na.rm = TRUE), .groups = "keep",
               n_valid = sum(!is.na(corrected_area))) %>% 
-            mutate(!!input$group1 := factor(paste0(.data[[input$group1]], " (n=", n_valid, ")"))) %>%
+            mutate(xnames = factor(paste0(.data[[input$group1]], " (n=", n_valid, ")"))) %>%  # !!input$group1 := WIP plotly with sample count per bar.
             arrange(as.character(Miso)) %>%
             arrange(across(c("metabolite",input$group1))) %>%
             group_by(across(c("metabolite",input$group1))) %>%
@@ -170,7 +170,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
           print("PLOTS")
           if(input$dodge1){
-            tab_plot <- tab_plot5 %>% filter(metabolite == input$feat2)
+            tab_plot <- tab_plot5 %>% filter(metabolite == input$feat2) %>% mutate(!!input$group1 := droplevels(!!sym(input$group1)), xnames = droplevels(xnames))
 
           if(input$relativOUT){ # newfact / as.formula(glue::glue("~{input$group1}"))
             p1 <- plotly::plot_ly(tab_plot, x = as.formula(glue::glue("~{input$group1}")), y = ~meanGroup, type = 'bar', 
@@ -185,7 +185,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
           }
 
           }else{
-            tab_plot <- tab_plot4 %>% filter(metabolite == input$feat2)
+            tab_plot <- tab_plot4 %>% filter(metabolite == input$feat2) %>% mutate(!!input$group1 := droplevels(!!sym(input$group1)))
           if(input$relativOUT){
             p1 <- plotly::plot_ly(tab_plot, x = as.formula(glue::glue("~{input$group1}")), y = ~meanGroup, type = 'bar', 
                   name = ~Miso, color = ~Miso, height = 500, colors = mycolors[1:length(levels(tab_plot$Miso))]) %>% 
@@ -201,7 +201,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
           }
 
         }else{
-          tab_plot <- mtab %>% filter(metabolite == input$feat2)
+          tab_plot <- mtab %>% filter(metabolite == input$feat2) %>% mutate(!!input$group1 := droplevels(!!sym(input$group1)))
 
           if(input$dodge1){
             BARMOD <- "group"
