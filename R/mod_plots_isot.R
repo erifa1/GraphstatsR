@@ -46,12 +46,14 @@ mod_plots_isot_ui <- function(id){
           materialSwitch(ns("dodge1"), label = "Dodge histogram", value = FALSE, status = "primary"),
           downloadButton(outputId = ns("hist_download"), label = "Download PDF (long process)"),
           downloadButton(outputId = ns("hist_downloadTAR"), label = "Download PNGs (long process)"),
+          downloadButton(outputId = ns("isotab_download"), label = "Download Table"),
           plotlyOutput(ns("histo_plotly"))
         ),
 
       box(width = 12,
         title = 'EnrC13 / TotalArea preview:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
         downloadButton(outputId = ns("bars_download"), label = "Download PDF (long process)"),
+        downloadButton(outputId = ns("enrc13tab_download"), label = "Download table"),
         plotOutput(ns("histo_Aire_enrC13"), height = "800px")
         ),
 
@@ -497,6 +499,16 @@ mod_plots_isot_server <- function(id, r = r, session = session){
     })
 
 
+    output$isotab_download <- downloadHandler(
+      filename = glue::glue("isoplot_table_{systim}.csv"),
+      content = function(file) {
+        if(!is.null(r_values$tab_plot5)){
+          write.csv(r_values$tab_plot5 %>% select(-c("SDPos", "SDPosAbs")), file, quote = FALSE, row.names = FALSE)
+        }else{
+          write.csv(r$merged2(), file, quote = FALSE, row.names = FALSE)
+        }
+      })
+
 
     output$hist_download <- downloadHandler(
       filename = glue::glue("isoplot_figures_{systim}.pdf"),
@@ -640,6 +652,16 @@ mod_plots_isot_server <- function(id, r = r, session = session){
   LL
   })
 
+
+    output$enrc13tab_download <- downloadHandler(
+      filename = glue::glue("enrC13_area_table_{systim}.csv"),
+      content = function(file) {
+        if(input$group1 == "sample"){
+          write.csv(r$MeanSD_Area_EnrC13_per_compound, file, quote = FALSE, row.names = FALSE)
+        }else{
+          write.csv(r$MeanSD_Area_EnrC13_per_compound_groups, file, quote = FALSE, row.names = FALSE)
+        }
+      })
 
   output$bars_download <- downloadHandler(
     filename = glue::glue("isoplot_figures_bars_{systim}.pdf"),
