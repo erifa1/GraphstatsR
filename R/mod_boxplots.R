@@ -38,15 +38,26 @@ mod_boxplots_ui <- function(id){
 
       fluidRow(
         box(title = "Plot Settings:", width = 7, status = "warning", solidHeader = TRUE,
+        column(6, 
             pickerInput(
               ns("fact3"),
-              label = "Factor to plot with in boxplot:",
+              label = "Variable on the X-axis in the boxplot:",
               choices = "",
               multiple = TRUE
-            ),
+            )
+        ),
+        column(6,
+          pickerInput(
+            ns("mode1"),
+            label = "Type of variable X:",
+            choices = c("Continuous", "Categorical"),
+            multiple = FALSE,
+            selected = "Categorical"
+          )
+        ),
             selectInput(
               ns("feat1"),
-              label = "Feature to plot in boxplot:",
+              label = "Feature to preview in boxplot:",
               choices = ""
             ),
             pickerInput(
@@ -91,8 +102,10 @@ mod_boxplots_ui <- function(id){
                   theme = "light-border",
                   placement = "right"
               ),
+            h1(""),
             actionButton(ns("go3"), "Run plot/stats & tests", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
             actionButton(ns("go4"), "Update plot only", icon = icon("play-circle"), style="color: #fff; background-color: #3b9ef5; border-color: #1a4469"),
+            h1(""),
             uiOutput(ns("DLbuttons"))
         ),
         box(title = "Reorder boxplots:", width = 5, status = "warning", solidHeader = TRUE, collapsible = FALSE,
@@ -284,24 +297,45 @@ mod_boxplots_server <- function(id, r = r, session = session){
       }else{
         ytitle <- input$custom_ytitle
       }
-      fun <- glue::glue("
-          tabfeat <- tabfeat0 %>%
-            dplyr::filter({r_values$fact3ok} %in% input$sorted1) %>%
-            droplevels() %>%
-            mutate({r_values$fact3ok} = factor({r_values$fact3ok}, levels = input$sorted1))
-        ")
-      eval(parse(text=fun))
+
+      tabfeat <- tabfeat0 %>%
+        dplyr::filter(.data[[r_values$fact3ok]] %in% input$sorted1) %>%
+        droplevels()
+        if(input$mode1 == "Categorical") {
+          tabfeat <- tabfeat %>% dplyr::mutate(!!r_values$fact3ok := factor(.data[[r_values$fact3ok]], levels = input$sorted1)) 
+        } else if(input$mode1 == "Continuous") {
+          tabfeat <- tabfeat %>% dplyr::mutate(!!r_values$fact3ok := as.numeric(.data[[r_values$fact3ok]]))
+        }
 
       # tabfeat[[r_values$fact3ok]] <- factor(tabfeat[[r_values$fact3ok]], levels = input$sorted1)
       
       cat(file=stderr(), 'Factor', "\n")
       print(tabfeat[[r_values$fact3ok]])
-     fun <-  glue::glue('p <- ggplot(tabfeat, aes(x = {r_values$fact3ok}, y = value, fill = {r_values$fact3ok})) + 
-        theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(input$feat1) +
-        theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust=1)) + 
-        labs(fill="")')
-      eval(parse(text=fun))
 
+      p <- ggplot(tabfeat, aes(
+        x = .data[[r_values$fact3ok]],
+        y = value,
+        fill = .data[[r_values$fact3ok]]
+      )) +
+        theme_bw() +
+        xlab("Condition") +
+        ylab(ytitle) +
+        ggtitle(input$feat1) +
+        theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust = 1)) +
+        labs(fill = "")
+
+        if(input$mode1 == "Continuous") {
+
+        time_range <- range(tabfeat[,r_values$fact3ok], na.rm = TRUE)
+        x_margin <- diff(time_range) * 0.005  # 0.5% de marge de chaque côté
+
+        # Custom X axis
+        p <- p + scale_x_continuous(
+          breaks =  scales::extended_breaks(20),
+          limits = c(time_range[1] - x_margin, time_range[2] + x_margin)
+        )
+
+      }
 
       # Y custom 
       p <- p + coord_cartesian(ylim = c(input$ymin, input$ymax)) + 
