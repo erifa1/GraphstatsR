@@ -319,10 +319,10 @@ mod_boxplots_server <- function(id, r = r, session = session){
       p <- ggplot(tabfeat, aes(
         x = .data[[r_values$fact3ok]],
         y = value,
-        fill = .data[[r_values$fact3ok]]
+        group = .data[[r_values$fact3ok]]
       )) +
         theme_bw() +
-        xlab("Condition") +
+        xlab(r_values$fact3ok) +
         ylab(ytitle) +
         ggtitle(input$feat1) +
         theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -373,7 +373,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
         ######
       }else{
         p <- p + 
-            geom_boxplot()            
+            geom_boxplot(fill = scales::hue_pal()(length(unique(tabfeat[[r_values$fact3ok]]))))            
       r_values$ggly <- ggly <- ggplotly(p)
       }
 
@@ -515,12 +515,12 @@ mod_boxplots_server <- function(id, r = r, session = session){
           #   eval(parse(text=fun))
 
             listP[[FEAT[i]]] <- ggplot(tabfeat, aes(
-              x = .data[[fact3ok]],
-              y = value,
-              group = .data[[fact3ok]]
-            )) + geom_boxplot(fill = "#99AFE3") +
+                x = .data[[fact3ok]],
+                y = value,
+                group = .data[[fact3ok]]
+              )) +
               theme_bw() +
-              xlab("Condition") +
+              xlab(fact3ok) +
               ylab(ytitle) +
               ggtitle(input$feat1) +
               theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -576,7 +576,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
                                 geom_boxplot(fill = "grey")
             }else{
               listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
-                                geom_boxplot()            
+                                geom_boxplot(fill = scales::hue_pal()(length(unique(tabfeat[[r_values$fact3ok]]))))
             }
 
             #   print("WRITE PLOTS")
