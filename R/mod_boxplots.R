@@ -253,7 +253,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
       print("SORTABLE UI")
       # print(str(tabF_melt2))
       # print(names(tabF_melt2))
-      bucket_list("Drag condition names to change order (multiple selection allowed)",
+      bucket_list("Drag categorical variable levels to change order (multiple selection allowed)",
         group_name = "bucket_list_group",
         orientation = "horizontal",
         add_rank_list("Plotted conditions",
@@ -1117,16 +1117,25 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
       output$DLbuttons <- renderUI({
         req(input$go3)
-        tagList(
-          column(width = 6,
-            downloadButton(outputId = ns("boxplots_download"), label = "Download PDF (long process)"),
-            downloadButton(outputId = ns("downloadTAR"), label = "Download Images (long process)")
-            ),
-          column(width = 6,
-            downloadButton(outputId = ns("pdf_rbase"), label = "Download PDF rbase (faster)"),
-            downloadButton(outputId = ns("downloadTAR_rbase"), label = "Download JPEG rbase (faster)")
+        if(input$mode1 == "Categorical"){
+          tagList(
+            column(width = 6,
+              downloadButton(outputId = ns("boxplots_download"), label = "Download PDF (long process)"),
+              downloadButton(outputId = ns("downloadTAR"), label = "Download JPEG (long process)")
+              ),
+            column(width = 6,
+              downloadButton(outputId = ns("pdf_rbase"), label = "Download PDF rbase (faster)"),
+              downloadButton(outputId = ns("downloadTAR_rbase"), label = "Download JPEG rbase (faster)")
+              )
             )
-        )
+        }else{
+          tagList(
+            column(width = 6,
+                          downloadButton(outputId = ns("boxplots_download"), label = "Download PDF (long process)"),
+                          downloadButton(outputId = ns("downloadTAR"), label = "Download JPEG (long process)")
+                          )
+            )
+        }
       })
     
     
