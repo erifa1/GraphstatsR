@@ -26,13 +26,12 @@ app_ui <- function(request) {
                   dashboardHeader(
                     title = glue::glue("GraphStatsR {package_version}"),
 
-                    tags$li(class="dropdown",tags$a("Hosted by", img(src = SK8img,
-                    title = "SK8", height = "20px"), headerText = "Source code",href="https://sk8.inrae.fr/", target="_blank")),
 
+                    tags$li(class="dropdown",tags$a(icon("book"), headerText = "Documentation", href="https://etienne.rifa.pages-forge.inrae.fr/graphstats/", target="_blank")),
                     tags$li(class="dropdown",tags$a(icon("gitlab"), headerText = "Source code",href="https://forgemia.inra.fr/etienne.rifa/graphstats", target="_blank")),
-                    tags$li(class="dropdown",tags$a(icon("clinic-medical"), headerText = "Issues",href="https://forgemia.inra.fr/etienne.rifa/graphstats/-/issues", target="_blank"))#,
-                    # tags$li(class="dropdown",tags$a(icon("twitter"), headerText = "Share", href="
-# https://twitter.com", target="_blank"))
+                    tags$li(class="dropdown",tags$a(icon("clinic-medical"), headerText = "Issues",href="https://forgemia.inra.fr/etienne.rifa/graphstats/-/issues", target="_blank")),
+                    tags$li(class="dropdown",tags$a("Hosted by", img(src = SK8img,
+                    title = "SK8", height = "20px"), headerText = "Source code",href="https://sk8.inrae.fr/", target="_blank"))
                   ),
                   
                   dashboardSidebar(
