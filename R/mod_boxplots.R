@@ -212,6 +212,10 @@ mod_boxplots_server <- function(id, r = r, session = session){
           fun = glue::glue('tabF_melt2 <- tabF_melt %>% dplyr::mutate(newfact = {input$fact3}, .after= "sample.id")')
           eval(parse(text=fun))
         }else{
+          if(input$mode1 == "Continuous"){
+            showNotification("Continuous variable on X-axis, only one continuous variable allowed (eg. Time variable).", type="error", duration = 5)
+            return(NULL)
+          }
           comb = glue::glue_collapse(input$fact3, sep = ', \"_\",')
           fun = glue::glue('tabF_melt2 <- tabF_melt %>% dplyr::mutate(newfact = paste0({comb}), .after= "sample.id")')
           eval(parse(text=fun))
