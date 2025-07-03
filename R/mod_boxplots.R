@@ -478,21 +478,12 @@ mod_boxplots_server <- function(id, r = r, session = session){
               ytitle <- input$custom_ytitle
             }
             
-            # fun <-  glue::glue('tabfeat0 = tabF_melt2[tabF_melt2$features == FEAT[i],] %>% 
-            #         group_by({fact3ok}) %>% 
-            #         mutate(outlier=ifelse(is_outlier(value), sample.id, NA))')
-            # eval(parse(text=fun))
+            # Prepare data for plotting, selecting feature and identifying outliers
             tabfeat0 <- tabF_melt2[tabF_melt2$features == FEAT[i], ] %>%
             group_by(!!rlang::sym(fact3ok)) %>%
             mutate(outlier = ifelse(is_outlier(value), sample.id, NA))
 
-            # fun <- glue::glue("
-            #     tabfeat <- tabfeat0 %>%
-            #       dplyr::filter({r_values$fact3ok} %in% input$sorted1) %>%
-            #       droplevels() %>%
-            #       mutate({r_values$fact3ok} = factor({r_values$fact3ok}, levels = input$sorted1))
-            #   ")
-            # eval(parse(text=fun))
+            # Filter data based on selected conditions and convert factor levels
             tabfeat <- tabfeat0 %>%
               dplyr::filter(.data[[r_values$fact3ok]] %in% input$sorted1) %>%
               droplevels()
@@ -502,18 +493,15 @@ mod_boxplots_server <- function(id, r = r, session = session){
                 tabfeat <- tabfeat %>% dplyr::mutate(!!fact3ok := as.numeric(.data[[fact3ok]]))
               }
 
+            # Filter out NAs
              if(!input$plotall){
                 tabfeat <- tabfeat %>% filter(!is.na(value))
               }
 
+            # Next feature if no data
             if(nrow(tabfeat) == 0){print("no data"); next}
-            
-          #   fun <-  glue::glue('listP[[FEAT[i]]] <- ggplot(tabfeat, aes(x = {fact3ok}, y = value, fill = {fact3ok})) + 
-          # geom_boxplot(fill = "#99AFE3") + theme_bw() + xlab("Condition") + ylab(ytitle) + ggtitle(FEAT[i]) +
-          # theme(legend.position = "None", axis.text.x = element_text(size=rel(input$sizexlab), angle = 45, hjust=1))  + 
-          # labs(fill="")')
-          #   eval(parse(text=fun))
 
+            # Create the boxplot
             listP[[FEAT[i]]] <- ggplot(tabfeat, aes(
                 x = .data[[fact3ok]],
                 y = value,
@@ -538,9 +526,6 @@ mod_boxplots_server <- function(id, r = r, session = session){
               )
 
             }
-
-          # save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = environment()); print("SAVE0")
-          # browser()
 
 
           # Y custom 
@@ -745,10 +730,13 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
           print(outfiles)
 
-          tar(filename, files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{outfiles}"))  #glue::glue("{tmpdir}/figures_jpgs_{systim}/")
-
+          file.copy(glue::glue("{tmpdir}/figures_jpgs_{systim}/"), ".", recursive=TRUE)
+          tar(filename, files = glue::glue("./figures_jpgs_{systim}/{outfiles}"))  #glue::glue("{tmpdir}/figures_jpgs_{systim}/")
+          unlink(glue::glue("./figures_jpgs_{systim}"), recursive = TRUE)
         }else{
-          tar(filename, files = glue::glue("{tmpdir}/figures_jpgs_{systim}/"))
+          file.copy(glue::glue("{tmpdir}/figures_jpgs_{systim}/"), ".", recursive=TRUE)
+          tar(filename, files = glue::glue("./figures_jpgs_{systim}/"))
+          unlink(glue::glue("./figures_jpgs_{systim}"), recursive = TRUE)
         }
 
 
@@ -929,7 +917,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
       filename <- glue::glue("{tmpdir}/figures_jpgs_rbase.tar"), 
 
       content <- function(file) {
-        print("WRITE PLOTS")
+        print("WRITE PLOTS RBase JPEG")
         systim <- as.numeric(Sys.time())
         print(glue::glue("{tmpdir}/figures_jpgs_{systim}"))
 
@@ -1102,10 +1090,14 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
           print(outfiles)
 
-          tar(filename, files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{outfiles}"))  #glue::glue("{tmpdir}/figures_jpgs_{systim}/")
+          file.copy(glue::glue("{tmpdir}/figures_jpgs_{systim}/"), ".", recursive=TRUE)
+          tar(filename, files = glue::glue("./figures_jpgs_{systim}/{outfiles}"))  #glue::glue("{tmpdir}/figures_jpgs_{systim}/")
+          unlink(glue::glue("./figures_jpgs_{systim}"), recursive = TRUE)
 
         }else{
-          tar(filename, files = glue::glue("{tmpdir}/figures_jpgs_{systim}/"))
+          file.copy(glue::glue("{tmpdir}/figures_jpgs_{systim}/"), ".", recursive=TRUE)
+          tar(filename, files = glue::glue("./figures_jpgs_{systim}/"))
+          unlink(glue::glue("./figures_jpgs_{systim}"), recursive = TRUE)
         }
 
 
