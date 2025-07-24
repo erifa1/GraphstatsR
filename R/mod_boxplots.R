@@ -211,6 +211,12 @@ mod_boxplots_server <- function(id, r = r, session = session){
       if(length(input$fact3) == 1){r_values$fact3ok <- fact3ok <- input$fact3
           fun = glue::glue('tabF_melt2 <- tabF_melt %>% dplyr::mutate(newfact = {input$fact3}, .after= "sample.id")')
           eval(parse(text=fun))
+
+          if(input$mode1 == "Continuous" & (is.character(tabF_melt2$newfact) | is.factor(tabF_melt2$newfact))){
+            showNotification("Choosen factor(s) is character or factor, switch to categorical mode.", type="error", duration = 5)
+            return(NULL)
+          }
+
         }else{
           if(input$mode1 == "Continuous"){
             showNotification("Continuous variable on X-axis, only one continuous variable allowed (eg. Time variable).", type="error", duration = 5)
