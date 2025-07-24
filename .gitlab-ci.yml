@@ -15,7 +15,7 @@ variables:
 
 install_linux:
   tags:
-    - mia6
+    - goldenrunner
   stage: install
   image: rocker/r-ver:${R_VERSION}
   before_script:
