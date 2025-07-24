@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# GraphstatsR <a href="https://forgemia.inra.fr/etienne.rifa/graphstats"><img src="man/figures/graphstatsr_150px.png" alt="ispickr" align="right" width="150" style="margin-top: 10px; margin-left: 20px;"/></a>
+# GraphstatsR <a href="https://forge.inrae.fr/etienne.rifa/graphstats"><img src="man/figures/graphstatsr_150px.png" alt="ispickr" align="right" width="150" style="margin-top: 10px; margin-left: 20px;"/></a>
 
 <!-- badges: start -->
 <!-- [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental) -->
@@ -31,11 +31,11 @@ sudo apt-get install r-base git libssl-dev cmake libcurl4-openssl-dev libgmp3-de
 
 * In R console: 
 You can install the released version of graphstats from [this
-repository](https://forgemia.inra.fr/etienne.rifa/graphstats) with:
+repository](https://forge.inrae.fr/etienne.rifa/graphstats) with:
 
 ``` r
 install.packages("renv")
-options(renv.config.gitlab.host = "https://forgemia.inra.fr")
+options(renv.config.gitlab.host = "https://forge.inrae.fr")
 
 renv::install("gitlab::etienne.rifa/graphstats@master")
 
