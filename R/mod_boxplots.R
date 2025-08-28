@@ -317,100 +317,117 @@ mod_boxplots_server <- function(id, r = r, session = session){
           tabfeat <- tabfeat %>% dplyr::mutate(!!r_values$fact3ok := as.numeric(.data[[r_values$fact3ok]]))
         }
 
-      # tabfeat[[r_values$fact3ok]] <- factor(tabfeat[[r_values$fact3ok]], levels = input$sorted1)
-
-      cat(file=stderr(), 'Factor', "\n")
-      print(tabfeat[[r_values$fact3ok]])
-
-      p <- ggplot(tabfeat, aes(
-        x = .data[[r_values$fact3ok]],
-        y = value,
-        group = .data[[r_values$fact3ok]]
-      )) +
-        theme_bw() +
-        xlab(r_values$fact3ok) +
-        ylab(ytitle) +
-        ggtitle(input$feat1) +
-        theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust = 1)) +
-        labs(fill = "")
-
-        if(input$mode1 == "Continuous") {
-
-        time_range <- range(tabfeat[,r_values$fact3ok], na.rm = TRUE)
-        x_margin <- diff(time_range) * 0.005  # 0.5% de marge de chaque côté
-
-        # Custom X axis
-        p <- p + scale_x_continuous(
-          breaks =  scales::extended_breaks(20),
-          limits = c(time_range[1] - x_margin, time_range[2] + x_margin)
-        )
-
-      }
-
-      # Y custom 
-      p <- p + coord_cartesian(ylim = c(input$ymin, input$ymax)) + 
-        scale_y_continuous(labels = function(x) format(x, scientific = input$ySci))
-      
-      if(!is.na(input$ysteps) & !is.na(input$ymin) & !is.na(input$ymax) ){
-        print("ycustom1")
-        p <- p + scale_y_continuous(breaks = seq(input$ymin, input$ymax, input$ysteps), 
-          labels = function(x) format(x, scientific = input$ySci))
-      }
-
-      if( is.na(input$ymin) | is.na(input$ymax) & !is.na(input$ysteps) ){
-        print("ycustom2")
-        p <- p + coord_cartesian(ylim = c(0, max(tabfeat$value, na.rm = TRUE))) + 
-          scale_y_continuous(breaks = seq(0, max(tabfeat$value, na.rm = TRUE), input$ysteps), 
-          labels = function(x) format(x, scientific = input$ySci))
-      }
+# browser()
 
 
-      if(!input$grey_mode){
-        p <- p + 
-            geom_boxplot(fill = "grey")
-
+      if( all(is.na(tabfeat$value)) ){
+        
+        p <- ggplot() +
+          theme_bw() +
+          ggtitle(input$feat1) +
+          annotate("text", x = 0.5, y = 0.5, label = "No data available for this feature", size = 6, hjust = 0.5) +
+          theme(axis.text = element_blank(),
+                axis.title = element_blank(),
+                axis.ticks = element_blank(),
+                panel.grid = element_blank())
         r_values$ggly <- ggly <- ggplotly(p)
-        # # Hoverinfo works only in grey mode 
-        tabfeat$sample.id <- as.character(tabfeat$sample.id)
-        hoverinfo <- with(tabfeat, paste0("sample: ", sample.id, "</br></br>", 
-                                        "value: ", value))
-        ggly$x$data[[1]]$text <- hoverinfo
-        ggly$x$data[[1]]$hoverinfo <- c("text", "boxes")
-        ######
+        
       }else{
-        tabfeat_OK <- tabfeat %>% dplyr::filter(!is.na(!!sym("value")))  # handles missing boxplot
-        p <- p + 
-            geom_boxplot(fill = scales::hue_pal()(length(unique(tabfeat_OK[[r_values$fact3ok]]))))            
-        r_values$ggly <- ggly <- ggplotly(p)
+        cat(file=stderr(), 'Factor', "\n")
+        print(tabfeat[[r_values$fact3ok]])
+
+        p <- ggplot(tabfeat, aes(
+          x = .data[[r_values$fact3ok]],
+          y = value,
+          group = .data[[r_values$fact3ok]]
+        )) +
+          theme_bw() +
+          xlab(r_values$fact3ok) +
+          ylab(ytitle) +
+          ggtitle(input$feat1) +
+          theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust = 1)) +
+          labs(fill = "")
+
+          if(input$mode1 == "Continuous") {
+
+          time_range <- range(tabfeat[,r_values$fact3ok], na.rm = TRUE)
+          x_margin <- diff(time_range) * 0.005  # 0.5% de marge de chaque côté
+
+          # Custom X axis
+          p <- p + scale_x_continuous(
+            breaks =  scales::extended_breaks(20),
+            limits = c(time_range[1] - x_margin, time_range[2] + x_margin)
+          )
+
+        }
+
+        # Y custom 
+        p <- p + coord_cartesian(ylim = c(input$ymin, input$ymax)) + 
+          scale_y_continuous(labels = function(x) format(x, scientific = input$ySci))
+        
+        if(!is.na(input$ysteps) & !is.na(input$ymin) & !is.na(input$ymax) ){
+          print("ycustom1")
+          p <- p + scale_y_continuous(breaks = seq(input$ymin, input$ymax, input$ysteps), 
+            labels = function(x) format(x, scientific = input$ySci))
+        }
+
+        if( is.na(input$ymin) | is.na(input$ymax) & !is.na(input$ysteps) ){
+          print("ycustom2")
+          p <- p + coord_cartesian(ylim = c(0, max(tabfeat$value, na.rm = TRUE))) + 
+            scale_y_continuous(breaks = seq(0, max(tabfeat$value, na.rm = TRUE), input$ysteps), 
+            labels = function(x) format(x, scientific = input$ySci))
+        }
+
+
+        if(!input$grey_mode){
+          p <- p + 
+              geom_boxplot(fill = "grey")
+
+          r_values$ggly <- ggly <- ggplotly(p)
+          # # Hoverinfo works only in grey mode 
+          tabfeat$sample.id <- as.character(tabfeat$sample.id)
+          hoverinfo <- with(tabfeat, paste0("sample: ", sample.id, "</br></br>", 
+                                          "value: ", value))
+          ggly$x$data[[1]]$text <- hoverinfo
+          ggly$x$data[[1]]$hoverinfo <- c("text", "boxes")
+          ######
+        }else{
+          tabfeat_OK <- tabfeat %>% dplyr::filter(!is.na(!!sym("value")))  # handles missing boxplot
+          p <- p + 
+              geom_boxplot(fill = scales::hue_pal()(length(unique(tabfeat_OK[[r_values$fact3ok]]))))            
+          r_values$ggly <- ggly <- ggplotly(p)
+        }
+
+        if(input$ggplotstats1 & max(table(tabfeat[[r_values$fact3ok]])) != 1){
+          fun <-  glue::glue('
+            ggstats <- ggbetweenstats(tabfeat, {r_values$fact3ok}, value, type = "nonparametric", 
+                p.adjust.method = "fdr", pairwise.display = "significant", xlab = "", ylab = ytitle,
+                outlier.tagging = TRUE, outlier.label = "sample.id", results.subtitle = FALSE, title = input$feat1) + 
+                coord_cartesian(ylim = c(0, NA))
+                ')
+          eval(parse(text=fun))
+
+          r_values$ggstats <- ggstats
+          outlist$ggstats <- ggstats
+        }
+
+
+        
+        
+        cat(file=stderr(), 'BOXPLOT done', "\n")
       }
+        
 
-      if(input$ggplotstats1 & max(table(tabfeat[[r_values$fact3ok]])) != 1){
-        fun <-  glue::glue('
-          ggstats <- ggbetweenstats(tabfeat, {r_values$fact3ok}, value, type = "nonparametric", 
-              p.adjust.method = "fdr", pairwise.display = "significant", xlab = "", ylab = ytitle,
-              outlier.tagging = TRUE, outlier.label = "sample.id", results.subtitle = FALSE, title = input$feat1) + 
-              coord_cartesian(ylim = c(0, NA))
-              ')
-        eval(parse(text=fun))
+        outlist$p <- p
+        outlist$tabF_melt2 <- r_values$tabF_melt2
+        outlist$fact3ok <- r_values$fact3ok 
+        outlist$ggly <- ggly
 
-        r_values$ggstats <- ggstats
-        outlist$ggstats <- ggstats
-      }
+        # waiter_hide()
+
+        outlist
 
 
-      
-      
-      cat(file=stderr(), 'BOXPLOT done', "\n")
-      
-
-      outlist$p <- p
-      outlist$tabF_melt2 <- r_values$tabF_melt2
-      outlist$fact3ok <- r_values$fact3ok 
-      outlist$ggly <- ggly
-
-      # waiter_hide()
-
-      outlist
     })
     
 
