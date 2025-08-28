@@ -378,8 +378,9 @@ mod_boxplots_server <- function(id, r = r, session = session){
         ggly$x$data[[1]]$hoverinfo <- c("text", "boxes")
         ######
       }else{
+        tabfeat_OK <- tabfeat %>% dplyr::filter(!is.na(!!sym("value")))  # handles missing boxplot
         p <- p + 
-            geom_boxplot(fill = scales::hue_pal()(length(unique(tabfeat[[r_values$fact3ok]]))))            
+            geom_boxplot(fill = scales::hue_pal()(length(unique(tabfeat_OK[[r_values$fact3ok]]))))            
       r_values$ggly <- ggly <- ggplotly(p)
       }
 
