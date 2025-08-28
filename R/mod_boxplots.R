@@ -318,7 +318,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
         }
 
       # tabfeat[[r_values$fact3ok]] <- factor(tabfeat[[r_values$fact3ok]], levels = input$sorted1)
-      
+
       cat(file=stderr(), 'Factor', "\n")
       print(tabfeat[[r_values$fact3ok]])
 
@@ -381,7 +381,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
         tabfeat_OK <- tabfeat %>% dplyr::filter(!is.na(!!sym("value")))  # handles missing boxplot
         p <- p + 
             geom_boxplot(fill = scales::hue_pal()(length(unique(tabfeat_OK[[r_values$fact3ok]]))))            
-      r_values$ggly <- ggly <- ggplotly(p)
+        r_values$ggly <- ggly <- ggplotly(p)
       }
 
       if(input$ggplotstats1 & max(table(tabfeat[[r_values$fact3ok]])) != 1){
@@ -517,7 +517,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
               theme_bw() +
               xlab(fact3ok) +
               ylab(ytitle) +
-              ggtitle(input$feat1) +
+              ggtitle(FEAT[i]) +
               theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust = 1)) +
               labs(fill = "")
 
@@ -567,8 +567,9 @@ mod_boxplots_server <- function(id, r = r, session = session){
               listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
                                 geom_boxplot(fill = "grey")
             }else{
+              tabfeat_OK <- tabfeat %>% dplyr::filter(!is.na(!!sym("value")))
               listP[[FEAT[i]]] <- listP[[FEAT[i]]] + 
-                                geom_boxplot(fill = scales::hue_pal()(length(unique(tabfeat[[r_values$fact3ok]]))))
+                                geom_boxplot(fill = scales::hue_pal()(length(unique(tabfeat_OK[[r_values$fact3ok]]))))
             }
 
             #   print("WRITE PLOTS")
