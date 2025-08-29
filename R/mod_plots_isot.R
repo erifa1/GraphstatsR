@@ -11,7 +11,6 @@
 #' 
 
 tmpdir <- tempdir()
-systim <- as.numeric(Sys.time())
 
 mycolors <- c("#A6CEE3","#001287","#579CC7","#70ff6b","#40A635","#89CB6C","#0c6e09","#EB494A","#F99392","#ad1203","#FDA746","#f5f54e","#FE8205","#cc8b2f","#8a0da6","#BFA5CF","#8861AC","#E7E099","#DEB969","#B15928")
 #colorRampPalette(RColorBrewer::brewer.pal(12, "Paired"))(20)
@@ -500,7 +499,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
 
     output$isotab_download <- downloadHandler(
-      filename = glue::glue("isoplot_table_{systim}.csv"),
+      filename = glue::glue("isoplot_table_{as.numeric(Sys.time())}.csv"),
       content = function(file) {
         if(!is.null(r_values$tab_plot5)){
           write.csv(r_values$tab_plot5 %>% select(-c("SDPos", "SDPosAbs")), file, quote = FALSE, row.names = FALSE)
@@ -509,9 +508,8 @@ mod_plots_isot_server <- function(id, r = r, session = session){
         }
       })
 
-
     output$hist_download <- downloadHandler(
-      filename = glue::glue("isoplot_figures_{systim}.pdf"),
+      filename = glue::glue("isoplot_figures_{as.numeric(Sys.time())}.pdf"),
       content = function(file) {
         print('DOWNLOAD ALL')
           print("isoplot")
@@ -547,6 +545,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
       content <- function(file) {
         print("WRITE PLOTS")
+        systim <- as.numeric(Sys.time())
         print(glue::glue("{tmpdir}/figures_{systim}/"))
         dir.create(glue::glue("{tmpdir}/figures_{systim}/"), recursive = TRUE)
 
@@ -654,7 +653,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
 
     output$enrc13tab_download <- downloadHandler(
-      filename = glue::glue("enrC13_area_table_{systim}.csv"),
+      filename = glue::glue("enrC13_area_table_{as.numeric(Sys.time())}.csv"),
       content = function(file) {
         if(input$group1 == "sample"){
           write.csv(r$MeanSD_Area_EnrC13_per_compound, file, quote = FALSE, row.names = FALSE)
@@ -664,7 +663,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
       })
 
   output$bars_download <- downloadHandler(
-    filename = glue::glue("isoplot_figures_bars_{systim}.pdf"),
+    filename = glue::glue("isoplot_figures_bars_{as.numeric(Sys.time())}.pdf"),
     content = function(file) {
       print('DOWNLOAD ALL')
         print("bars")
@@ -733,7 +732,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
 
   output$bars_spec_download <- downloadHandler(
-    filename = glue::glue("isoplot_figures_bars_spec_{systim}.pdf"),
+    filename = glue::glue("isoplot_figures_bars_spec_{as.numeric(Sys.time())}.pdf"),
     content = function(file) {
       print('DOWNLOAD ALL')
         print("bars")

@@ -15,7 +15,6 @@
 #' @import PMCMRplus
 
 tmpdir <- tempdir()
-systim <- as.numeric(Sys.time())
 
 
 labels <- list(
