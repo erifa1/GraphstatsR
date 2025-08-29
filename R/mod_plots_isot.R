@@ -64,6 +64,7 @@ mod_plots_isot_ui <- function(id){
           choices = ""
         ),
         downloadButton(outputId = ns("bars_spec_download"), label = "Download PDF (long process)"),
+        downloadButton(outputId = ns("bars_spec_downloadTAR"), label = "Download PNGs (long process)"),
         plotlyOutput(ns("histo_Aire_enrC13_allFeat_1group"), height = "800px")
       )
     
@@ -744,6 +745,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
     })
 
 
+
   output$bars_spec_download <- downloadHandler(
     filename = glue::glue("isoplot_figures_bars_spec_{as.numeric(Sys.time())}.pdf"),
     content = function(file) {
@@ -758,6 +760,38 @@ mod_plots_isot_server <- function(id, r = r, session = session){
           }, message = "Prepare pdf file... please wait.")
       print('pdf output')
         
+    }
+  )
+
+
+  output$bars_spec_downloadTAR <- downloadHandler(
+    filename = glue::glue("isoplot_figures_bars_spec_{as.numeric(Sys.time())}.zip"),
+    content = function(file) {
+      print('DOWNLOAD ALL')
+        print("bars")
+        req(pdfall_EnrC13_Area_spec())
+
+        systim <- as.numeric(Sys.time())
+
+        dir.create(glue::glue("{tmpdir}/figures_allMet13C_pngs_{systim}/"), recursive = TRUE)
+        
+        p <- pdfall_EnrC13_Area_spec()
+        
+        FEAT = names(p)
+
+          withProgress({
+
+          for(i in 1:length(FEAT)){
+            incProgress(1/length(FEAT))
+            ggsave(glue::glue("{tmpdir}/figures_allMet13C_pngs_{systim}/{FEAT[i]}.png"), p[[FEAT[i]]], width = 30, height = 15, units = "cm")
+          }
+
+          }, message = "Prepare PNGs file... please wait.")
+
+        file.copy(glue::glue("{tmpdir}/figures_allMet13C_pngs_{systim}"), ".", recursive=TRUE)
+        zip(file, files = glue::glue("./figures_allMet13C_pngs_{systim}") )
+        unlink(glue::glue("./figures_allMet13C_pngs_{systim}"), recursive = TRUE)
+
     }
   )
 
