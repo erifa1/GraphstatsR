@@ -53,7 +53,7 @@ mod_plots_isot_ui <- function(id){
         title = 'EnrC13 / TotalArea preview:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
         downloadButton(outputId = ns("bars_download"), label = "Download PDF (long process)"),
         downloadButton(outputId = ns("enrc13tab_download"), label = "Download table"),
-        plotOutput(ns("histo_Aire_enrC13"), height = "800px")
+        plotlyOutput(ns("histo_Aire_enrC13"), height = "800px")
         ),
 
       box(width = 12,
@@ -64,7 +64,7 @@ mod_plots_isot_ui <- function(id){
           choices = ""
         ),
         downloadButton(outputId = ns("bars_spec_download"), label = "Download PDF (long process)"),
-        plotOutput(ns("histo_Aire_enrC13_allFeat_1group"), height = "800px")
+        plotlyOutput(ns("histo_Aire_enrC13_allFeat_1group"), height = "800px")
       )
     
       )
@@ -255,7 +255,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
     })
 
 
-    output$histo_Aire_enrC13 <- renderPlot({
+    output$histo_Aire_enrC13 <- renderPlotly({
       req(reactive_calcul(), r$MeanSD_Area_EnrC13_per_compound, r$MeanSD_Area_EnrC13_per_compound_groups)
 
       if(input$group1 == "sample"){
@@ -308,10 +308,16 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
       }
 
-      gridExtra::grid.arrange(p3_bar, p4_bar, nrow = 2)
+      # gridExtra::grid.arrange(p3_bar, p4_bar, nrow = 2)
+
+      p3_barly <- ggplotly(p3_bar)
+      p4_barly <- ggplotly(p4_bar)
+
+      plotly::subplot(p3_barly, p4_barly, nrows = 2, shareX = FALSE, shareY = FALSE, margin = 0.06, heights = c(0.5, 0.5))
+
     })
 
-    output$histo_Aire_enrC13_allFeat_1group <- renderPlot({
+    output$histo_Aire_enrC13_allFeat_1group <- renderPlotly({
       req(r$MeanSD_Area_EnrC13_per_compound)
 
       # pour chaque condition  metabolite en x
@@ -344,7 +350,13 @@ mod_plots_isot_server <- function(id, r = r, session = session){
                            position=position_dodge(.9)) 
 
       
-      gridExtra::grid.arrange(p3_bar_all_feats_1group, p4_bar_all_feats_1group, nrow = 2)
+      #gridExtra::grid.arrange(p3_bar_all_feats_1group, p4_bar_all_feats_1group, nrow = 2)
+
+      p3_bar_all_feats_1grouply <- ggplotly(p3_bar_all_feats_1group)
+      p4_bar_all_feats_1grouply <- ggplotly(p4_bar_all_feats_1group)
+
+      plotly::subplot(p3_bar_all_feats_1grouply, p4_bar_all_feats_1grouply, nrows = 2, shareX = FALSE, shareY = FALSE, margin = 0.06, heights = c(0.5, 0.5))
+
 
     })
 

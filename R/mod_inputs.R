@@ -11,10 +11,7 @@
 #' @import dplyr
 #' @import tidyr
 #' @importFrom gridExtra marrangeGrob
-#' @importFrom plotly plotlyOutput
-#' @importFrom plotly renderPlotly
-#' @importFrom plotly ggplotly
-#' @importFrom plotly config
+#' @importFrom plotly plotlyOutput renderPlotly ggplotly config subplot
 #' @importFrom factoextra fviz_pca_var
 #' @importFrom factoextra get_pca_var
 #' @importFrom glue glue_collapse
