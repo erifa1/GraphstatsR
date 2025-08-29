@@ -104,16 +104,22 @@ mod_MSPT_server <- function(id, session=session, r=r){
         res <- r_values$res <- MSPT_fun(input$file$datapath, p = input$p1, outpath = NULL, minCID = input$minCID, maxBias = input$maxBIAS)
         res
 
+        systim <- as.numeric(Sys.time())
+        dir0 <- glue::glue("{tmpdir}/output_{ systim }")
+
         showNotification("Creating archive, please wait.", duration = 10, type = "message")
         dir.create(glue::glue("{tmpdir}/MSPT_{systim}/"), recursive = TRUE)
 
-        write.csv(res$Table, glue::glue("{tmpdir}/MSPT_{systim}/TP_results.csv"), sep=",", row.names = FALSE)
+        write.csv(res$Table, glue::glue("{tmpdir}/MSPT_{systim}/TP_results.csv"), row.names = FALSE)
         saveWorkbook(res$workbook, glue::glue("{tmpdir}/MSPT_{systim}/TP_results.xlsx"), overwrite = TRUE)
         
         ml <- marrangeGrob(res$figures, nrow=2, ncol=1)
         ggsave(glue::glue("{tmpdir}/MSPT_{systim}/TP_figures.pdf"), ml , width = 11, height = 8, dpi = 200)
 
-        zip(file, files = list.files(glue::glue("{tmpdir}/MSPT_{systim}/"), full.names = TRUE))
+        file.copy(glue::glue("{tmpdir}/MSPT_{systim}"), ".", recursive=TRUE)
+        zip(file, files = list.files(glue::glue("./MSPT_{systim}"), full.names = TRUE))
+        unlink(glue::glue("./MSPT_{systim}"), recursive = TRUE)
+        print("Archive created")
       }
     )
 
