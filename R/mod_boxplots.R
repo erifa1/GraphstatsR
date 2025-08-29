@@ -317,7 +317,6 @@ mod_boxplots_server <- function(id, r = r, session = session){
           tabfeat <- tabfeat %>% dplyr::mutate(!!r_values$fact3ok := as.numeric(.data[[r_values$fact3ok]]))
         }
 
-# browser()
 
 
       if( all(is.na(tabfeat$value)) ){
@@ -524,6 +523,19 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
             # Next feature if no data
             if(nrow(tabfeat) == 0){print("no data"); next}
+
+            # If all NA
+            if(all(is.na(tabfeat$value))){
+              listP[[FEAT[i]]] <- ggplot() +
+                  theme_bw() +
+                  ggtitle(FEAT[i]) +
+                  annotate("text", x = 0.5, y = 0.5, label = "No data available for this feature", size = 6, hjust = 0.5) +
+                  theme(axis.text = element_blank(),
+                        axis.title = element_blank(),
+                        axis.ticks = element_blank(),
+                        panel.grid = element_blank())
+              next
+            }
 
             # Create the boxplot
             listP[[FEAT[i]]] <- ggplot(tabfeat, aes(
