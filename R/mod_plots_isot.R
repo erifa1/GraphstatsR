@@ -553,13 +553,13 @@ mod_plots_isot_server <- function(id, r = r, session = session){
     )
 
     output$hist_downloadTAR <- downloadHandler(
-      filename <- glue::glue("{tmpdir}/figures_pngs.tar"), 
+      filename <- glue::glue("{tmpdir}/figures_CID_pngs.zip"), 
 
       content <- function(file) {
         print("WRITE PLOTS")
         systim <- as.numeric(Sys.time())
-        print(glue::glue("{tmpdir}/figures_{systim}/"))
-        dir.create(glue::glue("{tmpdir}/figures_{systim}/"), recursive = TRUE)
+
+        dir.create(glue::glue("{tmpdir}/figures_CID_pngs_{systim}/"), recursive = TRUE)
 
 
         req(pdfall_isoplot())
@@ -570,13 +570,14 @@ mod_plots_isot_server <- function(id, r = r, session = session){
         withProgress({
           for(i in 1:length(FEAT)){
             incProgress(1/length(FEAT))
-            ggsave(glue::glue("{tmpdir}/figures_{systim}/{FEAT[i]}.png"), listP[[FEAT[i]]], width = 30, height = 15, units = "cm")
+            ggsave(glue::glue("{tmpdir}/figures_CID_pngs_{systim}/{FEAT[i]}.png"), listP[[FEAT[i]]], width = 30, height = 15, units = "cm")
           }
 
         }, value = 0, message = "Generating PNGs...")
 
-        tar(glue::glue("{tmpdir}/figures_pngs.tar"), files = glue::glue("{tmpdir}/figures_{systim}") )
-
+        file.copy(glue::glue("{tmpdir}/figures_CID_pngs_{systim}"), ".", recursive=TRUE)
+        zip(file, files = glue::glue("./figures_CID_pngs_{systim}") )
+        unlink(glue::glue("./figures_CID_pngs_{systim}"), recursive = TRUE)
 
         file.copy(filename, file)
       },
