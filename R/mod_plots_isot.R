@@ -52,6 +52,7 @@ mod_plots_isot_ui <- function(id){
       box(width = 12,
         title = 'EnrC13 / TotalArea preview:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
         downloadButton(outputId = ns("bars_download"), label = "Download PDF (long process)"),
+        downloadButton(outputId = ns("bars_downloadTAR"), label = "Download PNGs (long process)"),
         downloadButton(outputId = ns("enrc13tab_download"), label = "Download table"),
         plotlyOutput(ns("histo_Aire_enrC13"), height = "800px")
         ),
@@ -689,9 +690,34 @@ mod_plots_isot_server <- function(id, r = r, session = session){
             ggsave(file, ml , width = 11, height = 8, dpi = 100)
           }, message = "Prepare pdf file... please wait.")
       print('pdf output')
-      
 
-      
+    }
+  )
+
+
+  output$bars_downloadTAR <- downloadHandler(
+    filename = glue::glue("isoplot_figures_bars_{as.numeric(Sys.time())}.zip"),
+    content = function(file) {
+      print('DOWNLOAD PNGS')
+        print("bars")
+        req(pdfall_EnrC13_Area())
+        systim <- as.numeric(Sys.time())
+        dir.create(glue::glue("{tmpdir}/figures_Area_13CEnr_pngs_{systim}/"), recursive = TRUE)
+        p <- pdfall_EnrC13_Area()
+
+        FEAT = names(p)
+          withProgress({
+
+            for(i in 1:length(FEAT)){
+              incProgress(1/length(FEAT))
+              ggsave(glue::glue("{tmpdir}/figures_Area_13CEnr_pngs_{systim}/{FEAT[i]}.png"), p[[FEAT[i]]], width = 30, height = 15, units = "cm")
+            }
+
+          }, message = "Prepare PNGs files... please wait.")
+
+        file.copy(glue::glue("{tmpdir}/figures_Area_13CEnr_pngs_{systim}"), ".", recursive=TRUE)
+        zip(file, files = glue::glue("./figures_Area_13CEnr_pngs_{systim}") )
+        unlink(glue::glue("./figures_Area_13CEnr_pngs_{systim}"), recursive = TRUE)
     }
   )
 
@@ -786,7 +812,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
             ggsave(glue::glue("{tmpdir}/figures_allMet13C_pngs_{systim}/{FEAT[i]}.png"), p[[FEAT[i]]], width = 30, height = 15, units = "cm")
           }
 
-          }, message = "Prepare PNGs file... please wait.")
+          }, message = "Prepare PNGs files... please wait.")
 
         file.copy(glue::glue("{tmpdir}/figures_allMet13C_pngs_{systim}"), ".", recursive=TRUE)
         zip(file, files = glue::glue("./figures_allMet13C_pngs_{systim}") )
