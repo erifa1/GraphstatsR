@@ -784,7 +784,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
 
     output$boxplots_download <- downloadHandler(
-      filename = glue::glue("{input$outtype}_figures_{systim}.pdf"),
+      filename = glue::glue("{input$outtype}_figures.pdf"),
       content = function(file) {
         print('DOWNLOAD ALL')
         if(input$ggstatOUT){
@@ -828,7 +828,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
 
     output$pdf_rbase <- downloadHandler(
-      filename = glue::glue("{input$outtype}_figuresRbase_{systim}.pdf"),
+      filename = glue::glue("{input$outtype}_figuresRbase.pdf"),
       content = function(file) {
         req(r_values$tabF_melt2,r_values$fact3ok)
         tabF_melt2 <- r_values$tabF_melt2 %>% tidyr::separate(features, sep = "__", into = c("feat","type","unit"), remove = FALSE) %>% 
