@@ -39,7 +39,8 @@ Imports:
     stringr,
     tibble,
     tidyr,
-    waiter
+    waiter,
+    yaml
 Suggests: 
     knitr,
     rmarkdown,

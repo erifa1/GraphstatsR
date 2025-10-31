@@ -2,8 +2,8 @@
 #' @name IsoPlot_fun
 #' @description A function to plot isotopic data from metabolomic experiments
 #' 
-#' @param feat_table Features table
-#' @param metadata_table Metadata table
+#' @param feat_table Features table from IsoCor (csv, tsv)
+#' @param metadata_table Metadata table (csv, tsv)
 #' @param groups Grouping factor
 #' @param relativeCID Stacked barplot of CID with relative value (TRUE) or absolute value (FALSE)
 #' @param dodgeCID Stacked barplot of CID with dodge position (TRUE) or stack position (FALSE)
@@ -40,9 +40,9 @@ if(is.null(feat_table) || is.null(metadata_table)){
 	stop("The features table / metadata table is not defined")
 }
 
-ds0 <- rio::import(feat_table)
+ds0 <- data.table::fread(feat_table)
 
-mt0 <- rio::import(metadata_table)
+mt0 <- data.table::fread(metadata_table)
 
 if(is.null(groups)){
 	stop("The grouping factor is not defined")

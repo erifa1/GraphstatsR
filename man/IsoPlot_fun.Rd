@@ -16,9 +16,9 @@ IsoPlot_fun(
 )
 }
 \arguments{
-\item{feat_table}{Features table}
+\item{feat_table}{Features table from IsoCor (csv, tsv)}
 
-\item{metadata_table}{Metadata table}
+\item{metadata_table}{Metadata table (csv, tsv)}
 
 \item{groups}{Grouping factor}
 
