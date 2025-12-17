@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
 
 # 🤔 Frequently Asked Question
 
-## How do I install GraphstatsR ?
+## How do I install GraphstatsR ?
 
 You just need to run these commands in R4.4.2 / Rstudio :
 
@@ -49,4 +49,8 @@ Errors may occur when tables modified in Microsoft Excel introduce inconsistent 
 
 You can open a new issue [here](https://forgemia.inra.fr/etienne.rifa/graphstats/-/issues).
 
+# Known issues
+
+- **Bug related to double spaces in metadata:**
+In HTML, consecutive spaces are automatically collapsed into a single one. This causes inconsistencies between the original dataset and the information displayed by the web application. **Conclusion:** Avoid using multiple spaces in metadata.
 
