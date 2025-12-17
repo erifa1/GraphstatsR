@@ -1,6 +1,17 @@
 #' gg_color_hue
 #' @param n a numeric
 #' @keywords internal
+#' 
+#' 
+
+smart_label <- function(x, digits = 3) {
+  ifelse(
+    abs(x) >= 1e4 | abs(x) < 1e-3,
+    formatC(x, format = "e", digits = digits),
+    formatC(x, format = "f", digits = digits, drop0trailing = TRUE)
+  )
+}
+
 gg_color_hue <- function(n) {
   hues = seq(15, 375, length = n + 1)
   hcl(h = hues, l = 65, c = 100)[1:n]

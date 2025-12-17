@@ -74,6 +74,7 @@ mod_boxplots_ui <- function(id){
                   materialSwitch(ns("ggplotstats1"), label = "Display ggstatsplot", value = TRUE, status = "primary"),
                   materialSwitch(ns("plotall"), label = "Plot all conditions (even NAs)", value = TRUE, status = "primary"),
                   materialSwitch(ns("grey_mode"), label = "Colored boxplot", value = TRUE, status = "primary"),
+                  materialSwitch(ns("labvalue1"), label = "Label values on barplots", value = FALSE, status = "primary"),
                   h3("Y axis settings"),
                   textInput(ns("custom_ytitle"), "Custom y title", "None"),
                   materialSwitch(ns("ySci"), label = "Yaxis scientific numbers:", value = TRUE, status = "primary"),
@@ -122,6 +123,12 @@ mod_boxplots_ui <- function(id){
         box(width = 12, 
             title = 'Boxplot:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
             plotlyOutput(ns("boxplotly1"), height = "500")
+        )
+      ),
+      fluidRow(
+        box(width = 12, 
+            title = 'Barplot:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+            plotOutput(ns("barplot1"), height = "500")
         )
       ),
       fluidRow(
@@ -413,6 +420,52 @@ mod_boxplots_server <- function(id, r = r, session = session){
         
         
         cat(file=stderr(), 'BOXPLOT done', "\n")
+
+        cat(file=stderr(), 'BARPLOT start', "\n")
+# save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = environment()); print("SAVE0")
+        print("Generate BARPLOT")
+        DF1 <- tabfeat[tabfeat$features == input$feat1, ] %>% ungroup()
+        DF1ok <- DF1 %>% mutate(sample.id = forcats::fct_relevel(sample.id, 
+        as.character(DF1$sample.id) )) 
+        DF1ok$value[is.na(DF1ok$value)] <- 0 #replace NA to 0 to keep filled colors when missing data.
+        # col1 <- input$feat1
+
+        if(length(DF1ok$newfact) == length(unique(DF1ok$newfact))){
+          # "#b6bced"
+          r_values$barplot1 <- p_barplot <- ggplot(DF1ok, mapping = aes(x = .data[["sample.id"]], 
+            y = .data[["value"]], 
+            order = .data[["newfact"]])) + 
+            geom_bar(stat = "identity", color="black", fill = "#b6bced")
+
+        }else{
+
+          r_values$barplot1 <- p_barplot <- ggplot(DF1ok, mapping = aes(x = .data[["sample.id"]], 
+            y = .data[["value"]], 
+            fill = .data[["newfact"]], order = .data[["newfact"]])) + 
+            geom_bar(stat = "identity") 
+        }
+
+          #Custom
+          p_barplot <- p_barplot +
+            theme_bw() +
+            xlab(r_values$fact3ok) +
+            ylab(ytitle) +
+            ggtitle(input$feat1) +
+            theme(legend.title = element_blank(), axis.text.x = element_text(angle = 45, hjust=1))
+
+        if(input$labvalue1){
+          r_values$barplot1 <- p_barplot <- p_barplot + geom_text(data=DF1ok, aes(x = .data[["sample.id"]], 
+          y = .data[["value"]] , label= .data[["value"]] %>% ifelse(. == 0 , NA, .) %>% smart_label() ) , hjust = -0.2,
+          col='black', size=3, angle=90) +
+            scale_y_continuous(
+              expand = expansion(mult = c(0, 0.1))
+            )
+        }
+
+
+        cat(file=stderr(), 'BARPLOT done', "\n")
+
+
       }
         
 
@@ -420,6 +473,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
         outlist$tabF_melt2 <- r_values$tabF_melt2
         outlist$fact3ok <- r_values$fact3ok 
         outlist$ggly <- ggly
+        outlist$barplot1 <- p_barplot
 
         # waiter_hide()
 
@@ -428,6 +482,14 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
     })
     
+    output$barplot1 <- renderPlot({
+      # req(boxplot1())
+      req(input$go3)
+      if(!is.null(r_values$barplot1)){
+        bp1 <- boxplot1()
+        bp1$barplot1
+      }
+    })
 
     
     output$boxplotly1 <- renderPlotly({
