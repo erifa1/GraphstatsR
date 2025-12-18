@@ -422,26 +422,28 @@ mod_boxplots_server <- function(id, r = r, session = session){
         cat(file=stderr(), 'BOXPLOT done', "\n")
 
         cat(file=stderr(), 'BARPLOT start', "\n")
-# save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = environment()); print("SAVE0")
+
         print("Generate BARPLOT")
         DF1 <- tabfeat[tabfeat$features == input$feat1, ] %>% ungroup()
-        DF1ok <- DF1 %>% mutate(sample.id = forcats::fct_relevel(sample.id, 
-        as.character(DF1$sample.id) )) 
+        
+        # Ordonne les barres selon l'ordre des niveaux du facteur
+        DF1ok <- DF1 %>% 
+        mutate( !!fact3ok := forcats::fct_relevel(.data[[fact3ok]], input$sorted1) ) %>%    # levels(.data[[fact3ok]])
+          arrange(.data[[fact3ok]]) %>%
+          mutate(sample.id = factor(sample.id, levels = unique(sample.id)))
+
         DF1ok$value[is.na(DF1ok$value)] <- 0 #replace NA to 0 to keep filled colors when missing data.
-        # col1 <- input$feat1
 
         if(length(DF1ok$newfact) == length(unique(DF1ok$newfact))){
-          # "#b6bced"
           r_values$barplot1 <- p_barplot <- ggplot(DF1ok, mapping = aes(x = .data[["sample.id"]], 
-            y = .data[["value"]], 
-            order = .data[["newfact"]])) + 
-            geom_bar(stat = "identity", color="black", fill = "#b6bced")
+            y = .data[["value"]] ) ) + 
+            geom_bar(stat = "identity", fill = "#b6bced")
 
         }else{
 
           r_values$barplot1 <- p_barplot <- ggplot(DF1ok, mapping = aes(x = .data[["sample.id"]], 
             y = .data[["value"]], 
-            fill = .data[["newfact"]], order = .data[["newfact"]])) + 
+            fill = .data[[fact3ok]])) + 
             geom_bar(stat = "identity") 
         }
 
@@ -676,8 +678,8 @@ mod_boxplots_server <- function(id, r = r, session = session){
       
       listP
     })
-    
 
+    
     pdfall_ggstat <- reactive({
       cat(file=stderr(), 'ALL BOXPLOT ggstat', "\n")
       req(r_values$tabF_melt2, r_values$fact3ok)
@@ -1213,13 +1215,17 @@ mod_boxplots_server <- function(id, r = r, session = session){
         req(input$go3)
         if(input$mode1 == "Categorical"){
           tagList(
-            column(width = 6,
-              downloadButton(outputId = ns("boxplots_download"), label = "Download PDF (long process)"),
-              downloadButton(outputId = ns("downloadTAR"), label = "Download JPEG (long process)")
+            column(width = 3,
+              downloadButton(outputId = ns("boxplots_download"), label = "Download Boxplots PDF (long process)"),
+              downloadButton(outputId = ns("downloadTAR"), label = "Download Boxplots JPEG (long process)")
               ),
-            column(width = 6,
-              downloadButton(outputId = ns("pdf_rbase"), label = "Download PDF rbase (faster)"),
-              downloadButton(outputId = ns("downloadTAR_rbase"), label = "Download JPEG rbase (faster)")
+            column(width = 3,
+              downloadButton(outputId = ns("pdf_rbase"), label = "Download Boxplots PDF rbase (faster)"),
+              downloadButton(outputId = ns("downloadTAR_rbase"), label = "Download Boxplots JPEG rbase (faster)")
+              ),
+            column(width = 3,
+              downloadButton(outputId = ns("barplots_download"), label = "Download Barplots PDF rbase (faster)")#,
+              # downloadButton(outputId = ns("downloadTAR_barplots"), label = "Download Barplots JPEG rbase (faster)")
               )
             )
         }else{
