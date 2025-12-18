@@ -347,7 +347,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
           group = .data[[r_values$fact3ok]]
         )) +
           theme_bw() +
-          xlab(r_values$fact3ok) +
+          xlab("") +
           ylab(ytitle) +
           ggtitle(input$feat1) +
           theme(legend.position = "None", axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -455,7 +455,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
           #Custom
           p_barplot <- p_barplot +
             theme_bw() +
-            xlab(r_values$fact3ok) +
+            xlab("") +
             ylab(ytitle) +
             ggtitle(input$feat1) +
             theme(legend.title = element_blank(), axis.text.x = element_text(angle = 45, hjust=1))
@@ -818,30 +818,9 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
         }, value = 0, message = "Generating Images...")
 
-        # tar(filename, files = glue::glue("{tmpdir}/figures_ggplot/figures_{systim}") )
-
-        if(length(input$outtype) > 1){
-
-          for (i in input$outtype){
-            tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}"))
-          }
-
-          print("TAR2")
-          # browser()
-          files <- dir(glue::glue("{tmpdir}/figures_jpgs_{systim}/"))
-          outfiles <- files[stringr::str_detect(files, ".tar")]
-
-          print(outfiles)
-
           file.copy(glue::glue("{tmpdir}/figures_jpgs_{systim}/"), ".", recursive=TRUE)
-          tar(filename, files = glue::glue("./figures_jpgs_{systim}/{outfiles}"))  #glue::glue("{tmpdir}/figures_jpgs_{systim}/")
+          tar(filename, files = glue::glue("figures_jpgs_{systim}"))
           unlink(glue::glue("./figures_jpgs_{systim}"), recursive = TRUE)
-        }else{
-          file.copy(glue::glue("{tmpdir}/figures_jpgs_{systim}/"), ".", recursive=TRUE)
-          tar(filename, files = glue::glue("./figures_jpgs_{systim}/"))
-          unlink(glue::glue("./figures_jpgs_{systim}"), recursive = TRUE)
-        }
-
 
         file.copy(filename, file)
       },
@@ -1177,33 +1156,9 @@ mod_boxplots_server <- function(id, r = r, session = session){
             dev.off()
         }
 
-
-        if(length(input$outtype) > 1){
-
-          for (i in input$outtype){
-            tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}"))
-            tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}"))
-            tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}"))
-          }
-
-          print("TAR2")
-          # browser()
-          files <- dir(glue::glue("{tmpdir}/figures_jpgs_{systim}/"))
-          outfiles <- files[stringr::str_detect(files, ".tar")]
-
-          print(outfiles)
-
           file.copy(glue::glue("{tmpdir}/figures_jpgs_{systim}/"), ".", recursive=TRUE)
-          tar(filename, files = glue::glue("./figures_jpgs_{systim}/{outfiles}"))  #glue::glue("{tmpdir}/figures_jpgs_{systim}/")
+          tar(filename, files = glue::glue("figures_jpgs_{systim}"))
           unlink(glue::glue("./figures_jpgs_{systim}"), recursive = TRUE)
-
-        }else{
-          file.copy(glue::glue("{tmpdir}/figures_jpgs_{systim}/"), ".", recursive=TRUE)
-          tar(filename, files = glue::glue("./figures_jpgs_{systim}/"))
-          unlink(glue::glue("./figures_jpgs_{systim}"), recursive = TRUE)
-        }
-
-
 
         file.copy(filename, file)
       },
@@ -1319,7 +1274,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
               #Custom
               listP[[FEAT[i]]] <- listP[[FEAT[i]]] +
                 theme_bw() +
-                xlab(r_values$fact3ok) +
+                xlab("") +
                 ylab(ytitle) +
                 ggtitle(input$feat1) +
                 theme(legend.title = element_blank(), axis.text.x = element_text(angle = 45, hjust=1))
@@ -1418,28 +1373,9 @@ mod_boxplots_server <- function(id, r = r, session = session){
 
         }, value = 0, message = "Generating Images...")
 
-
-        if(length(input$outtype) > 1){
-
-          for (i in input$outtype){
-            tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}"))
-          }
-
-          print("TAR2")
-          # browser()
-          files <- dir(glue::glue("{tmpdir}/figures_jpgs_{systim}/"))
-          outfiles <- files[stringr::str_detect(files, ".tar")]
-
-          print(outfiles)
-
           file.copy(glue::glue("{tmpdir}/figures_jpgs_{systim}/"), ".", recursive=TRUE)
-          tar(filename, files = glue::glue("./figures_jpgs_{systim}/{outfiles}"))  #glue::glue("{tmpdir}/figures_jpgs_{systim}/")
+          tar(filename, files = glue::glue("figures_jpgs_{systim}"))
           unlink(glue::glue("./figures_jpgs_{systim}"), recursive = TRUE)
-        }else{
-          file.copy(glue::glue("{tmpdir}/figures_jpgs_{systim}/"), ".", recursive=TRUE)
-          tar(filename, files = glue::glue("./figures_jpgs_{systim}/"))
-          unlink(glue::glue("./figures_jpgs_{systim}"), recursive = TRUE)
-        }
 
         file.copy(filename, file)
       },
