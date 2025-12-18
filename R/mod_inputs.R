@@ -187,7 +187,7 @@ mod_inputs_server <- function(id, r = r, session = session){
         content = function(file){
         print("DATATEST")
 
-        dstest <- read.csv(system.file("dataset", "features_quanti_data.csv", package="graphstatsr"), sep = ",")
+        dstest <- read.csv(system.file("dataset", "01_features_quanti_data.csv", package="graphstatsr"), sep = ",")
         write.csv(dstest, file, row.names=FALSE)
       },
         contentType = "application/tar"
@@ -199,7 +199,7 @@ mod_inputs_server <- function(id, r = r, session = session){
         content = function(file){
         print("METADATATEST")
 
-        mttest <- read.csv(system.file("dataset", "metadata_file.csv", package="graphstatsr"), sep = "\t")
+        mttest <- read.csv(system.file("dataset", "01_metadata_file.csv", package="graphstatsr"), sep = "\t")
         write.csv(mttest, file, row.names=FALSE)
       },
         contentType = "application/tar"
