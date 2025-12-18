@@ -424,28 +424,33 @@ mod_boxplots_server <- function(id, r = r, session = session){
         cat(file=stderr(), 'BARPLOT start', "\n")
 
         print("Generate BARPLOT")
+        fact3ok <- r_values$fact3ok
         DF1 <- tabfeat[tabfeat$features == input$feat1, ] %>% ungroup()
         
         # Ordonne les barres selon l'ordre des niveaux du facteur
-        DF1ok <- DF1 %>% 
-        mutate( !!fact3ok := forcats::fct_relevel(.data[[fact3ok]], input$sorted1) ) %>%    # levels(.data[[fact3ok]])
-          arrange(.data[[fact3ok]]) %>%
-          mutate(sample.id = factor(sample.id, levels = unique(sample.id)))
-
-        DF1ok$value[is.na(DF1ok$value)] <- 0 #replace NA to 0 to keep filled colors when missing data.
-
-        if(length(DF1ok$newfact) == length(unique(DF1ok$newfact))){
-          r_values$barplot1 <- p_barplot <- ggplot(DF1ok, mapping = aes(x = .data[["sample.id"]], 
-            y = .data[["value"]] ) ) + 
-            geom_bar(stat = "identity", fill = "#b6bced")
-
+        if(input$mode1 == "Continuous") {
+          DF1ok <- DF1
         }else{
-
-          r_values$barplot1 <- p_barplot <- ggplot(DF1ok, mapping = aes(x = .data[["sample.id"]], 
-            y = .data[["value"]], 
-            fill = .data[[fact3ok]])) + 
-            geom_bar(stat = "identity") 
+          DF1ok <- DF1 %>% 
+          mutate( !!fact3ok := forcats::fct_relevel(.data[[fact3ok]], input$sorted1) ) %>%    # levels(.data[[fact3ok]])
+            arrange(.data[[fact3ok]]) %>%
+            mutate(sample.id = factor(sample.id, levels = unique(sample.id)))
         }
+
+          DF1ok$value[is.na(DF1ok$value)] <- 0 #replace NA to 0 to keep filled colors when missing data.
+
+          if(length(DF1ok$newfact) == length(unique(DF1ok$newfact))){
+            r_values$barplot1 <- p_barplot <- ggplot(DF1ok, mapping = aes(x = .data[["sample.id"]], 
+              y = .data[["value"]] ) ) + 
+              geom_bar(stat = "identity", fill = "#b6bced")
+
+          }else{
+
+            r_values$barplot1 <- p_barplot <- ggplot(DF1ok, mapping = aes(x = .data[["sample.id"]], 
+              y = .data[["value"]], 
+              fill = .data[[fact3ok]])) + 
+              geom_bar(stat = "identity") 
+          }
 
           #Custom
           p_barplot <- p_barplot +
@@ -818,8 +823,6 @@ mod_boxplots_server <- function(id, r = r, session = session){
         if(length(input$outtype) > 1){
 
           for (i in input$outtype){
-            tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}"))
-            tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}"))
             tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}"))
           }
 
@@ -1208,6 +1211,244 @@ mod_boxplots_server <- function(id, r = r, session = session){
     )
 
 
+    
+    pdfall_barplots <- reactive({
+      cat(file=stderr(), 'ALL BOXPLOT', "\n")
+      LL <- list()
+      req(r_values$tabF_melt2, r_values$fact3ok)
+        fact3ok <- r_values$fact3ok
+        tabF_melt2 <- r_values$tabF_melt2
+        
+        tabF_melt2 <- tidyr::separate(tabF_melt2, features, c("feature","type","unit"), "__", remove= FALSE) %>% 
+                      mutate_if(is.character,as.factor) %>%
+                      filter(type %in% input$outtype) %>%
+                      droplevels()   
+
+        tabF_melt2$sample.id <- as.character(tabF_melt2$sample.id)
+        listP <- list()
+        FEAT = levels(tabF_melt2$features)
+
+        if(length(FEAT) > 200){
+            showNotification("More than 200 features to plot...", type="warning", duration = 5)
+        }
+
+
+        print(head(FEAT))
+
+        withProgress({
+
+          print("GENERATING BARPLOTS")
+          r_values$systim <- as.numeric(Sys.time())
+          dir.create(paste(tmpdir, "/figures_", r_values$systim, "/", sep = ""), recursive = TRUE)
+          print(paste(tmpdir, "/figures_", r_values$systim, "/", sep = ""))
+
+          for(i in 1:length(FEAT)){
+            incProgress(1/length(FEAT))
+            tt <- stringr::str_split(FEAT[i], "__")
+            if(input$custom_ytitle == "None"){
+              print(tt)
+              ytitle <- sapply(tt,"[[",2)
+              print(ytitle)
+              if(r$wgt1() != "Raw"){
+                ytitle <- glue::glue("{ytitle}, weight: {r$wgt1()}")
+              }
+              if(r$norm1() != "Raw"){
+                ytitle <- glue::glue("{ytitle}, norm.: {r$norm1()}")
+              }
+
+            }else{
+              ytitle <- input$custom_ytitle
+            }
+            
+            # Prepare data for plotting, selecting feature and identifying outliers
+            tabfeat0 <- tabF_melt2[tabF_melt2$features == FEAT[i], ] %>%
+            group_by(!!rlang::sym(fact3ok)) %>%
+            mutate(outlier = ifelse(is_outlier(value), sample.id, NA))
+
+            # Filter data based on selected conditions and convert factor levels
+            tabfeat <- tabfeat0 %>%
+              dplyr::filter(.data[[r_values$fact3ok]] %in% input$sorted1) %>%
+              droplevels()
+              if(input$mode1 == "Categorical") {
+                tabfeat <- tabfeat %>% dplyr::mutate(!!fact3ok := factor(.data[[fact3ok]], levels = input$sorted1)) %>%
+                            arrange(.data[[fact3ok]]) %>%
+                            mutate(sample.id = factor(sample.id, levels = unique(sample.id)))
+              } else if(input$mode1 == "Continuous") {
+                tabfeat <- tabfeat %>% dplyr::mutate(!!fact3ok := as.numeric(.data[[fact3ok]]))
+              }
+
+            # Filter out NAs
+             if(!input$plotall){
+                tabfeat <- tabfeat %>% filter(!is.na(value))
+              }
+
+            # Next feature if no data
+            if(nrow(tabfeat) == 0){print("no data"); next}
+
+            # If all NA
+            if(all(is.na(tabfeat$value))){
+              listP[[FEAT[i]]] <- ggplot() +
+                  theme_bw() +
+                  ggtitle(FEAT[i]) +
+                  annotate("text", x = 0.5, y = 0.5, label = "No data available for this feature", size = 6, hjust = 0.5) +
+                  theme(axis.text = element_blank(),
+                        axis.title = element_blank(),
+                        axis.ticks = element_blank(),
+                        panel.grid = element_blank())
+              next
+            }
+
+            # Create the boxplot
+            DF1ok <- tabfeat
+            DF1ok$value[is.na(DF1ok$value)] <- 0
+
+
+            if(length(DF1ok[[fact3ok]]) == length(unique(DF1ok[[fact3ok]]))){
+              listP[[FEAT[i]]] <- ggplot(DF1ok, mapping = aes(x = .data[["sample.id"]], 
+                y = .data[["value"]] ) ) + 
+                geom_bar(stat = "identity", fill = "#b6bced")
+
+            }else{
+
+              listP[[FEAT[i]]] <- ggplot(DF1ok, mapping = aes(x = .data[["sample.id"]], 
+                y = .data[["value"]], 
+                fill = .data[[fact3ok]])) + 
+                geom_bar(stat = "identity") 
+            }
+
+              #Custom
+              listP[[FEAT[i]]] <- listP[[FEAT[i]]] +
+                theme_bw() +
+                xlab(r_values$fact3ok) +
+                ylab(ytitle) +
+                ggtitle(input$feat1) +
+                theme(legend.title = element_blank(), axis.text.x = element_text(angle = 45, hjust=1))
+
+            if(input$labvalue1){
+              listP[[FEAT[i]]] <- listP[[FEAT[i]]] + geom_text(data=DF1ok, aes(x = .data[["sample.id"]], 
+              y = .data[["value"]] , label= .data[["value"]] %>% ifelse(. == 0 , NA, .) %>% smart_label() ) , hjust = -0.2,
+              col='black', size=3, angle=90) +
+                scale_y_continuous(
+                  expand = expansion(mult = c(0, 0.1))
+                )
+            }
+            
+            print(length(listP))
+          }
+
+        }, value = 0 ,message = "Processing boxplots ... please wait.")
+      print(length(listP))
+      
+      listP
+    })
+
+
+
+    output$barplots_download <- downloadHandler(
+      filename = glue::glue("{input$outtype}_figures.pdf"),
+      content = function(file) {
+        print('DOWNLOAD ALL barplots')
+          req(pdfall_barplots())
+          p <- pdfall_barplots()
+            withProgress({
+              ml <- marrangeGrob(p, nrow=1, ncol=1)
+
+                if(as.numeric(input$nbPicPage) == 4){
+                  ml <- marrangeGrob(p, nrow=2, ncol=2)
+                 }else if(as.numeric(input$nbPicPage) == 3){
+                  ml <- marrangeGrob(p, nrow= 1, ncol=as.numeric(input$nbPicPage))
+                  }else if(as.numeric(input$nbPicPage) == 2){
+                    if(input$verticaldisplay){
+                      ml <- marrangeGrob(p, nrow= as.numeric(input$nbPicPage), ncol= 1)
+                    }else{
+                      ml <- marrangeGrob(p, nrow= 1, ncol=as.numeric(input$nbPicPage))
+                    }
+                  }
+
+              # ggsave(file, ml, units = "cm", width = 20, height = 15, dpi = 100)
+              ggsave(file, ml , width = 11, height = 8, dpi = 100)
+            }, message = "Prepare pdf file... please wait.")
+        print('pdf output')
+        
+
+        
+      }
+    )
+
+
+
+
+    output$downloadTAR_barplots <- downloadHandler(
+      filename <- glue::glue("{tmpdir}/figures_pngs_ggplot.tar"), 
+
+      content <- function(file) {
+        print("WRITE PLOTS")
+        systim <- as.numeric(Sys.time())
+        print(glue::glue("{tmpdir}/figures_pngs/"))
+
+        if(length(input$outtype)>1){
+          for (i in input$outtype){
+            dir.create(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}/"), recursive = TRUE)
+          }
+        }else{
+          dir.create(glue::glue("{tmpdir}/figures_jpgs_{systim}/"), recursive = TRUE)
+        }
+
+          req(pdfall_barplots())
+          listP <- pdfall_barplots()
+
+        FEAT = names(listP)
+
+
+        withProgress({
+          for(i in 1:length(FEAT)){
+            incProgress(1/length(FEAT))
+
+            met1 <- stringr::str_split_1(FEAT[i], "__")[1] %>% stringr::str_replace("/", "_")
+            typ1 <- stringr::str_split_1(FEAT[i], "__")[2] %>% stringr::str_replace("/", "_")
+
+            if(length(input$outtype)>1){
+              path1 <- glue::glue("{tmpdir}/figures_jpgs_{systim}/{typ1}/")
+            }else{
+              path1 <- glue::glue("{tmpdir}/figures_jpgs_{systim}")
+            }
+
+            ggsave(glue::glue("{path1}/{met1}.{input$ImgFormat}"), listP[[FEAT[i]]], width = 30, height = 15, units = "cm", device = input$ImgFormat)
+          }
+
+        }, value = 0, message = "Generating Images...")
+
+
+        if(length(input$outtype) > 1){
+
+          for (i in input$outtype){
+            tar(glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}.tar"), files = glue::glue("{tmpdir}/figures_jpgs_{systim}/{i}"))
+          }
+
+          print("TAR2")
+          # browser()
+          files <- dir(glue::glue("{tmpdir}/figures_jpgs_{systim}/"))
+          outfiles <- files[stringr::str_detect(files, ".tar")]
+
+          print(outfiles)
+
+          file.copy(glue::glue("{tmpdir}/figures_jpgs_{systim}/"), ".", recursive=TRUE)
+          tar(filename, files = glue::glue("./figures_jpgs_{systim}/{outfiles}"))  #glue::glue("{tmpdir}/figures_jpgs_{systim}/")
+          unlink(glue::glue("./figures_jpgs_{systim}"), recursive = TRUE)
+        }else{
+          file.copy(glue::glue("{tmpdir}/figures_jpgs_{systim}/"), ".", recursive=TRUE)
+          tar(filename, files = glue::glue("./figures_jpgs_{systim}/"))
+          unlink(glue::glue("./figures_jpgs_{systim}"), recursive = TRUE)
+        }
+
+        file.copy(filename, file)
+      },
+      contentType = "application/tar"
+    )
+
+
+
+
 
 
 
@@ -1215,24 +1456,24 @@ mod_boxplots_server <- function(id, r = r, session = session){
         req(input$go3)
         if(input$mode1 == "Categorical"){
           tagList(
-            column(width = 3,
-              downloadButton(outputId = ns("boxplots_download"), label = "Download Boxplots PDF (long process)"),
-              downloadButton(outputId = ns("downloadTAR"), label = "Download Boxplots JPEG (long process)")
+            column(width = 4,
+              downloadButton(outputId = ns("boxplots_download"), label = "Boxplots PDF (long process)"),
+              downloadButton(outputId = ns("downloadTAR"), label = "Boxplots JPEG (long process)")
               ),
-            column(width = 3,
-              downloadButton(outputId = ns("pdf_rbase"), label = "Download Boxplots PDF rbase (faster)"),
-              downloadButton(outputId = ns("downloadTAR_rbase"), label = "Download Boxplots JPEG rbase (faster)")
+            column(width = 4,
+              downloadButton(outputId = ns("pdf_rbase"), label = "Boxplots PDF rbase (faster)"),
+              downloadButton(outputId = ns("downloadTAR_rbase"), label = "Boxplots JPEG rbase (faster)")
               ),
-            column(width = 3,
-              downloadButton(outputId = ns("barplots_download"), label = "Download Barplots PDF rbase (faster)")#,
-              # downloadButton(outputId = ns("downloadTAR_barplots"), label = "Download Barplots JPEG rbase (faster)")
+            column(width = 4,
+              downloadButton(outputId = ns("barplots_download"), label = "Barplots PDF"),
+              downloadButton(outputId = ns("downloadTAR_barplots"), label = "Barplots JPEG")
               )
             )
         }else{
           tagList(
             column(width = 6,
-                          downloadButton(outputId = ns("boxplots_download"), label = "Download PDF (long process)"),
-                          downloadButton(outputId = ns("downloadTAR"), label = "Download JPEG (long process)")
+                          downloadButton(outputId = ns("boxplots_download"), label = "PDF (long process)"),
+                          downloadButton(outputId = ns("downloadTAR"), label = "JPEG (long process)")
                           )
             )
         }
