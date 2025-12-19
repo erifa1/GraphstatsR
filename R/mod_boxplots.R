@@ -1276,7 +1276,7 @@ mod_boxplots_server <- function(id, r = r, session = session){
                 theme_bw() +
                 xlab("") +
                 ylab(ytitle) +
-                ggtitle(input$feat1) +
+                ggtitle(FEAT[i]) +
                 theme(legend.title = element_blank(), axis.text.x = element_text(angle = 45, hjust=1))
 
             if(input$labvalue1){

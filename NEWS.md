@@ -1,4 +1,4 @@
-# graphstatsr 2.6.0
+# graphstatsr 2.6.1
 
 **Added Features :**
 
