@@ -1,3 +1,13 @@
+# v2.6.0
+
+**Added Features :**
+- Bar plots with the same behavior as box plots; more informative for samples without replicates.
+- Option to add value labels to each bar in bar plots.
+- Download button (PDF and JPEG).
+
+**Improvement:**
+- Simplified archive download for JPEG files.
+
 # v2.5.0
 
 **Added Features :**
