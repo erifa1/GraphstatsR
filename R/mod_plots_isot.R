@@ -26,10 +26,11 @@ mod_plots_isot_ui <- function(id){
               label = "Feature to preview:",
               choices = ""
             ),
-            selectInput(
+            pickerInput(
               ns("group1"),
               label = "Variable used to calculate means:",
-              choices = ""
+              choices = "",
+              multiple = TRUE
             )
           ),
         box(title = "Reorder boxplots:", width = 7, status = "warning", solidHeader = TRUE, collapsible = FALSE,
@@ -47,27 +48,27 @@ mod_plots_isot_ui <- function(id){
           downloadButton(outputId = ns("hist_downloadTAR"), label = "Download PNGs (long process)"),
           downloadButton(outputId = ns("isotab_download"), label = "Download Table"),
           plotlyOutput(ns("histo_plotly"))
-        ),
+        )#,
 
-      box(width = 12,
-        title = 'EnrC13 / TotalArea preview:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
-        downloadButton(outputId = ns("bars_download"), label = "Download PDF (long process)"),
-        downloadButton(outputId = ns("bars_downloadTAR"), label = "Download PNGs (long process)"),
-        downloadButton(outputId = ns("enrc13tab_download"), label = "Download table"),
-        plotlyOutput(ns("histo_Aire_enrC13"), height = "800px")
-        ),
+      # box(width = 12,
+      #   title = 'EnrC13 / TotalArea preview:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+      #   downloadButton(outputId = ns("bars_download"), label = "Download PDF (long process)"),
+      #   downloadButton(outputId = ns("bars_downloadTAR"), label = "Download PNGs (long process)"),
+      #   downloadButton(outputId = ns("enrc13tab_download"), label = "Download table"),
+      #   plotlyOutput(ns("histo_Aire_enrC13"), height = "800px")
+      #   ),
 
-      box(width = 12,
-        title = 'EnrC13 / TotalArea preview per specific group or sample :', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
-        selectInput(
-          ns("level1"),
-          label = "Select group for preview:",
-          choices = ""
-        ),
-        downloadButton(outputId = ns("bars_spec_download"), label = "Download PDF (long process)"),
-        downloadButton(outputId = ns("bars_spec_downloadTAR"), label = "Download PNGs (long process)"),
-        plotlyOutput(ns("histo_Aire_enrC13_allFeat_1group"), height = "800px")
-      )
+      # box(width = 12,
+      #   title = 'EnrC13 / TotalArea preview per specific group or sample :', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+      #   selectInput(
+      #     ns("level1"),
+      #     label = "Select group for preview:",
+      #     choices = ""
+      #   ),
+      #   downloadButton(outputId = ns("bars_spec_download"), label = "Download PDF (long process)"),
+      #   downloadButton(outputId = ns("bars_spec_downloadTAR"), label = "Download PNGs (long process)"),
+      #   plotlyOutput(ns("histo_Aire_enrC13_allFeat_1group"), height = "800px")
+      # )
     
       )
   )
@@ -91,7 +92,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
                             choices = unique(dsF$metabolite),
                             selected = unique(dsF$metabolite)[1])
 
-          updateSelectInput(session, "group1",
+          updatePickerInput(session, "group1",
                             choices = colnames(mtF),
                             selected = colnames(mtF)[1])
   })
@@ -106,18 +107,19 @@ mod_plots_isot_server <- function(id, r = r, session = session){
     output$sortable1 <- renderUI({
       tabF_melt2 <- tabF_melt <- r$merged2()
 
-      # if(length(input$group1) == 1){
-          r_values$group1ok <- group1ok <- input$group1
-          fun = glue::glue('tabF_melt2 <- tabF_melt %>% dplyr::mutate(newfact = {input$group1}, .after= "sample")')
+      if(length(input$group1) == 1){
+          r_values$newfact <- input$group1 #r_values$group1ok <- group1ok
+          fun = glue::glue('r_values$tabF_melt2 <- tabF_melt2 <- tabF_melt') #%>% dplyr::mutate(newfact = {input$group1}, .after= "sample")
           eval(parse(text=fun))
         
-        # }else{  # concat factors
-        #   comb = glue::glue_collapse(input$group1, sep = ', \"_\",')
-        #   fun = glue::glue('tabF_melt2 <- tabF_melt %>% dplyr::mutate(newfact = paste0({comb}), .after= "sample")')
-        #   eval(parse(text=fun))
-        #   fact3ok <- "newfact"
-        #   tabF_melt2
-        # }
+        }else{  # concat factors
+          comb = glue::glue_collapse(input$group1, sep = ', \"_\",')
+          r_values$newfact <- newfact <- glue::glue_collapse(input$group1, "_")
+          fun = glue::glue('r_values$tabF_melt2 <- tabF_melt2 <- tabF_melt %>% dplyr::mutate(!!newfact := paste0({comb}), .after= "sample")')
+          eval(parse(text=fun))
+          # fact3ok <- "newfact"
+          tabF_melt2
+        }
 
       print("SORTABLE UI")
       # print(str(tabF_melt2))
@@ -126,7 +128,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
         group_name = "bucket_list_group",
         orientation = "horizontal",
         add_rank_list("Plotted conditions",
-          unique(tabF_melt2$newfact), ns("sorted2"),
+          unique(tabF_melt2[,r_values$newfact]), ns("sorted2"),
           options = sortable_options(multiDrag = TRUE)
         ),
         add_rank_list("Stashed conditions",
@@ -139,28 +141,33 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
       output$histo_plotly <- renderPlotly({
         req(r$merged2())
-        mtab <- r$merged2()
+        newfact <- r_values$newfact
+        mtab <- r_values$tabF_melt2 #r$merged2()
         xform <- list()
+
+        tt <- input$sorted2 ###
+        tt2 <- r$merged2()
+save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = environment()); print("SAVE0")
           fun <- glue::glue("
           mtab <- mtab %>%
-          dplyr::filter({input$group1} %in% input$sorted2) %>%
+          dplyr::filter({newfact} %in% input$sorted2) %>%
           droplevels() %>%
-          mutate({input$group1} = factor({input$group1}, levels = input$sorted2))
+          mutate({newfact} = factor({newfact}, levels = input$sorted2))
           ")
           eval(parse(text=fun))
 
-        if(input$group1 != "sample"){
+        if(newfact != "sample"){
           print("GROUPING")
-          cols2group <- c("metabolite", "Miso", input$group1)
+          cols2group <- c("metabolite", "Miso", newfact)
 
           tab_plot4 <- mtab %>% group_by(across(all_of(cols2group))) %>% 
             summarise(meanGroup = mean(isotopologue_fraction, na.rm = TRUE), sdGroup = sd(isotopologue_fraction, na.rm = TRUE),
               meanGroupAbs = mean(corrected_area, na.rm = TRUE), sdGroupAbs = sd(corrected_area, na.rm = TRUE), .groups = "keep",
               n_valid = sum(!is.na(corrected_area))) %>% 
-            mutate(xnames = factor(paste0(.data[[input$group1]], " (n=", n_valid, ")"))) %>%  # !!input$group1 := WIP plotly with sample count per bar.
+            mutate(xnames = factor(paste0(.data[[newfact]], " (n=", n_valid, ")"))) %>%  # !!newfact := WIP plotly with sample count per bar.
             arrange(as.character(Miso)) %>%
-            arrange(across(c("metabolite",input$group1))) %>%
-            group_by(across(c("metabolite",input$group1))) %>%
+            arrange(across(c("metabolite",newfact))) %>%
+            group_by(across(c("metabolite",newfact))) %>%
             mutate(SDPos = cumsum(meanGroup), SDPosAbs = cumsum(meanGroupAbs)) %>%
             as.data.frame()
 
@@ -173,29 +180,29 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
           print("PLOTS")
           if(input$dodge1){
-            tab_plot <- tab_plot5 %>% filter(metabolite == input$feat2) %>% mutate(!!input$group1 := droplevels(!!sym(input$group1)), xnames = droplevels(xnames))
+            tab_plot <- tab_plot5 %>% filter(metabolite == input$feat2) %>% mutate(!!newfact := droplevels(!!sym(newfact)), xnames = droplevels(xnames))
 
-          if(input$relativOUT){ # newfact / as.formula(glue::glue("~{input$group1}"))
-            p1 <- plotly::plot_ly(tab_plot, x = as.formula(glue::glue("~{input$group1}")), y = ~meanGroup, type = 'bar', 
+          if(input$relativOUT){ # newfact / as.formula(glue::glue("~{newfact}"))
+            p1 <- plotly::plot_ly(tab_plot, x = as.formula(glue::glue("~{newfact}")), y = ~meanGroup, type = 'bar', 
                   name = ~Miso, color = ~Miso, height = 500, colors = mycolors[1:length(levels(tab_plot$Miso))]) %>% 
                   plotly::layout(title=glue::glue("Isotopologue Fraction {input$feat2}"), yaxis = list(title = 'Isotopologue fraction'), 
                   barmode = "group", xaxis = xform)
           }else{        
-            p1 <- plotly::plot_ly(tab_plot, x = as.formula(glue::glue("~{input$group1}")), y = ~meanGroupAbs, type = 'bar', 
+            p1 <- plotly::plot_ly(tab_plot, x = as.formula(glue::glue("~{newfact}")), y = ~meanGroupAbs, type = 'bar', 
                   name = ~Miso, color = ~Miso, height = 500, colors = mycolors[1:length(levels(tab_plot$Miso))]) %>% 
                   plotly::layout(title=glue::glue("Corrected Area {input$feat2}"), yaxis = list(title = 'Isotopologue fraction'), 
                   barmode = "group", xaxis = xform, barnorm = "")
           }
 
           }else{
-            tab_plot <- tab_plot4 %>% filter(metabolite == input$feat2) %>% mutate(!!input$group1 := droplevels(!!sym(input$group1)))
+            tab_plot <- tab_plot4 %>% filter(metabolite == input$feat2) %>% mutate(!!newfact := droplevels(!!sym(newfact)))
           if(input$relativOUT){
-            p1 <- plotly::plot_ly(tab_plot, x = as.formula(glue::glue("~{input$group1}")), y = ~meanGroup, type = 'bar', 
+            p1 <- plotly::plot_ly(tab_plot, x = as.formula(glue::glue("~{newfact}")), y = ~meanGroup, type = 'bar', 
                   name = ~Miso, color = ~Miso, height = 500, colors = mycolors[1:length(levels(tab_plot$Miso))]) %>% 
                   plotly::layout(title=glue::glue("Isotopologue Fraction {input$feat2}"), yaxis = list(title = 'Isotopologue fraction'), 
                   barmode = "stack", xaxis = xform)
           }else{        
-            p1 <- plotly::plot_ly(tab_plot, x = as.formula(glue::glue("~{input$group1}")), y = ~meanGroupAbs, type = 'bar', 
+            p1 <- plotly::plot_ly(tab_plot, x = as.formula(glue::glue("~{newfact}")), y = ~meanGroupAbs, type = 'bar', 
                   name = ~Miso, color = ~Miso, height = 500, colors = mycolors[1:length(levels(tab_plot$Miso))]) %>% 
                   plotly::layout(title=glue::glue('Raw area {input$feat2}'), yaxis = list(title = 'Raw area'), 
                   barmode = "stack", xaxis = xform, barnorm = "")
@@ -204,7 +211,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
           }
 
         }else{
-          tab_plot <- mtab %>% filter(metabolite == input$feat2) %>% mutate(!!input$group1 := droplevels(!!sym(input$group1)))
+          tab_plot <- mtab %>% filter(metabolite == input$feat2) %>% mutate(!!newfact := droplevels(!!sym(newfact)))
 
           if(input$dodge1){
             BARMOD <- "group"
@@ -226,141 +233,141 @@ mod_plots_isot_server <- function(id, r = r, session = session){
         p1
       })
 
-    reactive_calcul <- reactive({
-      req(r$merged2(), input$sorted2, input$group1)
-      print("CALCUL")
-      mtab <- r$merged2()
+    # reactive_calcul <- reactive({
+    #   req(r$merged2(), input$sorted2, input$group1)
+    #   print("CALCUL")
+    #   mtab <- r$merged2()
 
-      fun <- glue::glue("
-      mtab <- mtab %>%
-      dplyr::filter({input$group1} %in% input$sorted2) %>%
-      droplevels() %>%
-      mutate({input$group1} = factor({input$group1}, levels = input$sorted2))
-      ")
-      eval(parse(text=fun))
+    #   fun <- glue::glue("
+    #   mtab <- mtab %>%
+    #   dplyr::filter({input$group1} %in% input$sorted2) %>%
+    #   droplevels() %>%
+    #   mutate({input$group1} = factor({input$group1}, levels = input$sorted2))
+    #   ")
+    #   eval(parse(text=fun))
 
-      xform <- list()
-      CalculPerMerabolite <- mtab %>% group_by(sample) %>% group_by(metabolite, .add = TRUE) %>% 
-      mutate(TotArea = sum(corrected_area), CID = 100 * corrected_area / sum(corrected_area), 
-      EnrC13 = 100 * sum(Area_Iso)/(max(isotopologue) * sum(corrected_area)))
+    #   xform <- list()
+    #   CalculPerMerabolite <- mtab %>% group_by(sample) %>% group_by(metabolite, .add = TRUE) %>% 
+    #   mutate(TotArea = sum(corrected_area), CID = 100 * corrected_area / sum(corrected_area), 
+    #   EnrC13 = 100 * sum(Area_Iso)/(max(isotopologue) * sum(corrected_area)))
 
-      cols2group <- c(input$group1)
-      r$MeanSD_Area_EnrC13_per_compound <- MeanSD_Area_EnrC13_per_compound <- CalculPerMerabolite %>% group_by(across(all_of(cols2group)), .add = TRUE) %>%
-          summarise(MeanTotalArea = mean(TotArea), SDTotalArea = sd(TotArea), 
-          MeanEnrC13 = mean(EnrC13), SDEnrC13 = sd(EnrC13))
+    #   cols2group <- c(input$group1)
+    #   r$MeanSD_Area_EnrC13_per_compound <- MeanSD_Area_EnrC13_per_compound <- CalculPerMerabolite %>% group_by(across(all_of(cols2group)), .add = TRUE) %>%
+    #       summarise(MeanTotalArea = mean(TotArea), SDTotalArea = sd(TotArea), 
+    #       MeanEnrC13 = mean(EnrC13), SDEnrC13 = sd(EnrC13))
 
-      cols2group <- c("metabolite", input$group1)
-      r$MeanSD_Area_EnrC13_per_compound_groups <- MeanSD_Area_EnrC13_per_compound_groups <- MeanSD_Area_EnrC13_per_compound %>% ungroup() %>% 
-          group_by(across(all_of(cols2group))) %>%
-          summarise(MeanGroupArea = mean(MeanTotalArea, na.rm = TRUE), SDTotalArea = sd(MeanTotalArea, na.rm = TRUE), 
-          MeanGroupEnrC13 = mean(MeanEnrC13, na.rm = TRUE), SDEnrC13 = sd(MeanEnrC13, na.rm = TRUE))
-    })
+    #   cols2group <- c("metabolite", input$group1)
+    #   r$MeanSD_Area_EnrC13_per_compound_groups <- MeanSD_Area_EnrC13_per_compound_groups <- MeanSD_Area_EnrC13_per_compound %>% ungroup() %>% 
+    #       group_by(across(all_of(cols2group))) %>%
+    #       summarise(MeanGroupArea = mean(MeanTotalArea, na.rm = TRUE), SDTotalArea = sd(MeanTotalArea, na.rm = TRUE), 
+    #       MeanGroupEnrC13 = mean(MeanEnrC13, na.rm = TRUE), SDEnrC13 = sd(MeanEnrC13, na.rm = TRUE))
+    # })
 
 
-    output$histo_Aire_enrC13 <- renderPlotly({
-      req(reactive_calcul(), r$MeanSD_Area_EnrC13_per_compound, r$MeanSD_Area_EnrC13_per_compound_groups)
+    # output$histo_Aire_enrC13 <- renderPlotly({
+    #   req(reactive_calcul(), r$MeanSD_Area_EnrC13_per_compound, r$MeanSD_Area_EnrC13_per_compound_groups)
 
-      if(input$group1 == "sample"){
+    #   if(input$group1 == "sample"){
 
-        tabhisto <- r$MeanSD_Area_EnrC13_per_compound %>% filter(metabolite == input$feat2)
+    #     tabhisto <- r$MeanSD_Area_EnrC13_per_compound %>% filter(metabolite == input$feat2)
 
-        p3_bar <- p3_bar1 <- ggplot(tabhisto, aes(x = sample, y = MeanEnrC13)) +
-              geom_bar(stat="identity", color="black", fill = "#b6bced",
-                       position=position_dodge()) + 
-                theme_bw() + ylab("EnrC13") +
-              theme(legend.position = "None", 
-                axis.text.x = element_text(
-                angle = 45, hjust=1)) +
-              ggtitle(glue::glue("EnrC13 {input$feat2} all samples") )
+    #     p3_bar <- p3_bar1 <- ggplot(tabhisto, aes(x = sample, y = MeanEnrC13)) +
+    #           geom_bar(stat="identity", color="black", fill = "#b6bced",
+    #                    position=position_dodge()) + 
+    #             theme_bw() + ylab("EnrC13") +
+    #           theme(legend.position = "None", 
+    #             axis.text.x = element_text(
+    #             angle = 45, hjust=1)) +
+    #           ggtitle(glue::glue("EnrC13 {input$feat2} all samples") )
 
-        p4_bar <- p4_bar1 <- ggplot(tabhisto, aes(x = sample, y = MeanTotalArea)) +
-              geom_bar(stat="identity", color="black", fill = "#b6bced",
-                       position=position_dodge()) + 
-                theme_bw() + ylab("TotalArea") +
-              theme(legend.position = "None", 
-                axis.text.x = element_text(
-                angle = 45, hjust=1)) +
-              ggtitle(glue::glue("TotalArea {input$feat2} all samples") )
+    #     p4_bar <- p4_bar1 <- ggplot(tabhisto, aes(x = sample, y = MeanTotalArea)) +
+    #           geom_bar(stat="identity", color="black", fill = "#b6bced",
+    #                    position=position_dodge()) + 
+    #             theme_bw() + ylab("TotalArea") +
+    #           theme(legend.position = "None", 
+    #             axis.text.x = element_text(
+    #             angle = 45, hjust=1)) +
+    #           ggtitle(glue::glue("TotalArea {input$feat2} all samples") )
 
-      }else{
+    #   }else{
 
-        tabhisto2 <- r$MeanSD_Area_EnrC13_per_compound_groups %>% filter(metabolite == input$feat2)
+    #     tabhisto2 <- r$MeanSD_Area_EnrC13_per_compound_groups %>% filter(metabolite == input$feat2)
 
-        p3_bar <- p3_bar_group <- ggplot(tabhisto2, aes(x = get(input$group1), y = MeanGroupEnrC13)) +
-              geom_bar(stat="identity", color="black", fill = "#b6bced",
-                       position=position_dodge()) + 
-                theme_bw() + ylab("Mean EnrC13") + xlab(input$group1) +
-              theme(legend.position = "None", 
-                axis.text.x = element_text(
-                angle = 45, hjust=1)) +
-              ggtitle(glue::glue("EnrC13 {input$feat2} all groups")) +
-                geom_errorbar(aes(ymin=MeanGroupEnrC13-SDEnrC13, ymax=MeanGroupEnrC13+SDEnrC13), width=.2,
-                             position=position_dodge(.9)) 
+    #     p3_bar <- p3_bar_group <- ggplot(tabhisto2, aes(x = get(input$group1), y = MeanGroupEnrC13)) +
+    #           geom_bar(stat="identity", color="black", fill = "#b6bced",
+    #                    position=position_dodge()) + 
+    #             theme_bw() + ylab("Mean EnrC13") + xlab(input$group1) +
+    #           theme(legend.position = "None", 
+    #             axis.text.x = element_text(
+    #             angle = 45, hjust=1)) +
+    #           ggtitle(glue::glue("EnrC13 {input$feat2} all groups")) +
+    #             geom_errorbar(aes(ymin=MeanGroupEnrC13-SDEnrC13, ymax=MeanGroupEnrC13+SDEnrC13), width=.2,
+    #                          position=position_dodge(.9)) 
 
-        p4_bar <- p4_bar_group <- ggplot(tabhisto2, aes(x = get(input$group1), y = MeanGroupArea)) +
-              geom_bar(stat="identity", color="black", fill = "#b6bced",
-                       position=position_dodge()) + 
-                theme_bw() + ylab("Mean TotalArea") + xlab(input$group1) +
-              theme(legend.position = "None", 
-                axis.text.x = element_text(
-                angle = 45, hjust=1)) +
-              ggtitle(glue::glue("TotalArea {input$feat2} all groups")) +
-                geom_errorbar(aes(ymin=MeanGroupArea-SDTotalArea, ymax=MeanGroupArea+SDTotalArea), width=.2,
-                             position=position_dodge(.9)) 
+    #     p4_bar <- p4_bar_group <- ggplot(tabhisto2, aes(x = get(input$group1), y = MeanGroupArea)) +
+    #           geom_bar(stat="identity", color="black", fill = "#b6bced",
+    #                    position=position_dodge()) + 
+    #             theme_bw() + ylab("Mean TotalArea") + xlab(input$group1) +
+    #           theme(legend.position = "None", 
+    #             axis.text.x = element_text(
+    #             angle = 45, hjust=1)) +
+    #           ggtitle(glue::glue("TotalArea {input$feat2} all groups")) +
+    #             geom_errorbar(aes(ymin=MeanGroupArea-SDTotalArea, ymax=MeanGroupArea+SDTotalArea), width=.2,
+    #                          position=position_dodge(.9)) 
 
-      }
+    #   }
 
-      # gridExtra::grid.arrange(p3_bar, p4_bar, nrow = 2)
+    #   # gridExtra::grid.arrange(p3_bar, p4_bar, nrow = 2)
 
-      p3_barly <- ggplotly(p3_bar)
-      p4_barly <- ggplotly(p4_bar)
+    #   p3_barly <- ggplotly(p3_bar)
+    #   p4_barly <- ggplotly(p4_bar)
 
-      plotly::subplot(p3_barly, p4_barly, nrows = 2, shareX = FALSE, shareY = FALSE, margin = 0.06, heights = c(0.5, 0.5))
+    #   plotly::subplot(p3_barly, p4_barly, nrows = 2, shareX = FALSE, shareY = FALSE, margin = 0.06, heights = c(0.5, 0.5))
 
-    })
+    # })
 
-    output$histo_Aire_enrC13_allFeat_1group <- renderPlotly({
-      req(r$MeanSD_Area_EnrC13_per_compound)
+    # output$histo_Aire_enrC13_allFeat_1group <- renderPlotly({
+    #   req(r$MeanSD_Area_EnrC13_per_compound)
 
-      # pour chaque condition  metabolite en x
-      MeanSD_Area_EnrC13_per_compound <- r$MeanSD_Area_EnrC13_per_compound
-      tabhisto3 <- MeanSD_Area_EnrC13_per_compound %>% filter(!!as.symbol(input$group1) == input$level1)  %>% ungroup() %>% 
-          group_by(metabolite) %>% 
-          summarise(MeanEnrC13Group = mean(MeanEnrC13, na.rm = TRUE), MeanTotAreaGroup = mean(MeanTotalArea, na.rm = TRUE),
-            sdEnrC13Group = sd(MeanEnrC13, na.rm = TRUE), sdTotAreaGroup = sd(MeanTotalArea, na.rm = TRUE))
+    #   # pour chaque condition  metabolite en x
+    #   MeanSD_Area_EnrC13_per_compound <- r$MeanSD_Area_EnrC13_per_compound
+    #   tabhisto3 <- MeanSD_Area_EnrC13_per_compound %>% filter(!!as.symbol(input$group1) == input$level1)  %>% ungroup() %>% 
+    #       group_by(metabolite) %>% 
+    #       summarise(MeanEnrC13Group = mean(MeanEnrC13, na.rm = TRUE), MeanTotAreaGroup = mean(MeanTotalArea, na.rm = TRUE),
+    #         sdEnrC13Group = sd(MeanEnrC13, na.rm = TRUE), sdTotAreaGroup = sd(MeanTotalArea, na.rm = TRUE))
 
-      p3_bar_all_feats_1group <- ggplot(tabhisto3, aes(x = metabolite, y = MeanEnrC13Group)) +
-            geom_bar(stat="identity", color="black", fill = "#b6bced",
-                     position=position_dodge()) + 
-              theme_bw() + ylab("EnrC13") +
-            theme(legend.position = "None", 
-              axis.text.x = element_text(
-              angle = 45, hjust=1)) +
-            ggtitle(glue::glue("EnrC13 {input$group1} == {input$level1} all metabolites")) +
-              geom_errorbar(aes(ymin=MeanEnrC13Group-sdEnrC13Group, ymax=MeanEnrC13Group+sdEnrC13Group), width=.2,
-                           position=position_dodge(.9)) 
+    #   p3_bar_all_feats_1group <- ggplot(tabhisto3, aes(x = metabolite, y = MeanEnrC13Group)) +
+    #         geom_bar(stat="identity", color="black", fill = "#b6bced",
+    #                  position=position_dodge()) + 
+    #           theme_bw() + ylab("EnrC13") +
+    #         theme(legend.position = "None", 
+    #           axis.text.x = element_text(
+    #           angle = 45, hjust=1)) +
+    #         ggtitle(glue::glue("EnrC13 {input$group1} == {input$level1} all metabolites")) +
+    #           geom_errorbar(aes(ymin=MeanEnrC13Group-sdEnrC13Group, ymax=MeanEnrC13Group+sdEnrC13Group), width=.2,
+    #                        position=position_dodge(.9)) 
 
-      p4_bar_all_feats_1group <- ggplot(tabhisto3, aes(x = metabolite, y = MeanTotAreaGroup)) +
-            geom_bar(stat="identity", color="black", fill = "#b6bced",
-                     position=position_dodge()) + 
-              theme_bw() + ylab("Total Area") +
-            theme(legend.position = "None", 
-              axis.text.x = element_text(
-              angle = 45, hjust=1)) +
-            ggtitle(glue::glue("Total Area {input$group1} == {input$level1} all metabolites")) +
-              geom_errorbar(aes(ymin=MeanTotAreaGroup-sdTotAreaGroup, ymax=MeanTotAreaGroup+sdTotAreaGroup), width=.2,
-                           position=position_dodge(.9)) 
+    #   p4_bar_all_feats_1group <- ggplot(tabhisto3, aes(x = metabolite, y = MeanTotAreaGroup)) +
+    #         geom_bar(stat="identity", color="black", fill = "#b6bced",
+    #                  position=position_dodge()) + 
+    #           theme_bw() + ylab("Total Area") +
+    #         theme(legend.position = "None", 
+    #           axis.text.x = element_text(
+    #           angle = 45, hjust=1)) +
+    #         ggtitle(glue::glue("Total Area {input$group1} == {input$level1} all metabolites")) +
+    #           geom_errorbar(aes(ymin=MeanTotAreaGroup-sdTotAreaGroup, ymax=MeanTotAreaGroup+sdTotAreaGroup), width=.2,
+    #                        position=position_dodge(.9)) 
 
       
-      #gridExtra::grid.arrange(p3_bar_all_feats_1group, p4_bar_all_feats_1group, nrow = 2)
+    #   #gridExtra::grid.arrange(p3_bar_all_feats_1group, p4_bar_all_feats_1group, nrow = 2)
 
-      p3_bar_all_feats_1grouply <- ggplotly(p3_bar_all_feats_1group)
-      p4_bar_all_feats_1grouply <- ggplotly(p4_bar_all_feats_1group)
+    #   p3_bar_all_feats_1grouply <- ggplotly(p3_bar_all_feats_1group)
+    #   p4_bar_all_feats_1grouply <- ggplotly(p4_bar_all_feats_1group)
 
-      plotly::subplot(p3_bar_all_feats_1grouply, p4_bar_all_feats_1grouply, nrows = 2, shareX = FALSE, shareY = FALSE, margin = 0.06, heights = c(0.5, 0.5))
+    #   plotly::subplot(p3_bar_all_feats_1grouply, p4_bar_all_feats_1grouply, nrows = 2, shareX = FALSE, shareY = FALSE, margin = 0.06, heights = c(0.5, 0.5))
 
 
-    })
+    # })
 
         
 
@@ -369,14 +376,15 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
     pdfall_isoplot <- reactive({
       cat(file=stderr(), 'All Barplots ...', "\n")
-      req(r$merged2())
-      mtab <- r$merged2()
+      req(r_values$tabF_melt2)
+      mtab <- r_values$tabF_melt2
+      newfact <- r_values$newfact
 
       fun <- glue::glue("
       mtab <- mtab %>%
-      dplyr::filter({input$group1} %in% input$sorted2) %>%
+      dplyr::filter({newfact} %in% input$sorted2) %>%
       droplevels() %>%
-      mutate({input$group1} = factor({input$group1}, levels = input$sorted2)) %>%
+      mutate({newfact} = factor({newfact}, levels = input$sorted2)) %>%
       as.data.frame()
       ")
       eval(parse(text=fun))
@@ -388,7 +396,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
         mtab$Miso <- factor(mtab$Miso, rev(levels(mtab$Miso)))
 
-        if(input$group1 == "sample"){
+        if(newfact == "sample"){
           for(i in unique(mtab$metabolite)){
             # incProgress(1/length(i))
             print(i)
@@ -433,12 +441,12 @@ mod_plots_isot_server <- function(id, r = r, session = session){
         }else{
           print("GROUP BY")
 
-        # cols2group <- c("metabolite", "Miso", input$group1)
+        # cols2group <- c("metabolite", "Miso", newfact)
         # tab_plot4 <- mtab %>% group_by(across(all_of(cols2group))) %>% 
         #     summarise(meanGroup = mean(isotopologue_fraction), sdGroup = sd(isotopologue_fraction), .groups = "keep") %>% 
         #     arrange(as.character(Miso)) %>%
-        #     arrange(across(c("metabolite",input$group1))) %>%
-        #     group_by(across(c("metabolite",input$group1))) %>%
+        #     arrange(across(c("metabolite",newfact))) %>%
+        #     group_by(across(c("metabolite",newfact))) %>%
         #     mutate(SDPos = cumsum(meanGroup)) %>%
         #     as.data.frame()
 
@@ -454,16 +462,16 @@ mod_plots_isot_server <- function(id, r = r, session = session){
             for(i in unique(mtab$metabolite)){
 
               if(input$relativOUT){
-                LL[[i]] <- ggplot(as.data.frame(tab_plot5) %>% filter(metabolite == i), aes(fill=Miso, y=meanGroup, x=get(input$group1))) + 
+                LL[[i]] <- ggplot(as.data.frame(tab_plot5) %>% filter(metabolite == i), aes(fill=Miso, y=meanGroup, x=get(newfact))) + 
                   geom_bar(position="dodge", stat="identity") + scale_fill_manual(values = col1) +
-                  theme_bw() + labs(fill='') + ggtitle(glue::glue("{i} mean CID by '{input$group1}' factor")) + xlab("") + ylab("Mean Isotopologue fraction") +
+                  theme_bw() + labs(fill='') + ggtitle(glue::glue("{i} mean CID by '{newfact}' factor")) + xlab("") + ylab("Mean Isotopologue fraction") +
                   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
                   geom_errorbar(aes(ymin = meanGroup-sdGroup, ymax = meanGroup+sdGroup), width = 0.3, position = position_dodge(0.9))
 
               }else{
-                LL[[i]] <- ggplot(as.data.frame(tab_plot5) %>% filter(metabolite == i), aes(fill=Miso, y=meanGroupAbs, x=get(input$group1))) + 
+                LL[[i]] <- ggplot(as.data.frame(tab_plot5) %>% filter(metabolite == i), aes(fill=Miso, y=meanGroupAbs, x=get(newfact))) + 
                   geom_bar(position="dodge", stat="identity") + scale_fill_manual(values = col1) +
-                  theme_bw() + labs(fill='') + ggtitle(glue::glue("{i} mean Area by '{input$group1}' factor")) + xlab("") + ylab("Mean corrected area") +
+                  theme_bw() + labs(fill='') + ggtitle(glue::glue("{i} mean Area by '{newfact}' factor")) + xlab("") + ylab("Mean corrected area") +
                   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
                   geom_errorbar(aes(ymin = meanGroupAbs-sdGroupAbs, ymax = meanGroupAbs+sdGroupAbs), width = 0.3, position = position_dodge(0.9))
 
@@ -481,17 +489,17 @@ mod_plots_isot_server <- function(id, r = r, session = session){
             for(i in unique(mtab$metabolite)){
               print(i)
               if(input$relativOUT){
-                LL[[i]] <- ggplot(as.data.frame(tab_plot4) %>% filter(metabolite == i), aes(fill=Miso, y=meanGroup, x=get(input$group1))) + 
+                LL[[i]] <- ggplot(as.data.frame(tab_plot4) %>% filter(metabolite == i), aes(fill=Miso, y=meanGroup, x=get(newfact))) + 
                     geom_bar(position="stack", stat="identity") + scale_fill_manual(values = col2) +
-                    theme_bw() + labs(fill='') + ggtitle(glue::glue("{i} mean CID by '{input$group1}' factor")) +
+                    theme_bw() + labs(fill='') + ggtitle(glue::glue("{i} mean CID by '{newfact}' factor")) +
                     xlab("") + ylab("Mean Isotopologue fraction") +
                     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) + 
                     geom_linerange(aes(ymin = SDPos-sdGroup, ymax = SDPos+sdGroup), width = 0.1, position = position_jitter(0.1))
 
                 }else{
-                LL[[i]] <- ggplot(as.data.frame(tab_plot4) %>% filter(metabolite == i), aes(fill=Miso, y=meanGroupAbs, x=get(input$group1))) + 
+                LL[[i]] <- ggplot(as.data.frame(tab_plot4) %>% filter(metabolite == i), aes(fill=Miso, y=meanGroupAbs, x=get(newfact))) + 
                     geom_bar(position="stack", stat="identity") + scale_fill_manual(values = col2) +
-                    theme_bw() + labs(fill='') + ggtitle(glue::glue("{i} mean Area by '{input$group1}' factor")) +
+                    theme_bw() + labs(fill='') + ggtitle(glue::glue("{i} mean Area by '{newfact}' factor")) +
                     xlab("") + ylab("Mean corrected area") +
                     theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) + 
                     geom_linerange(aes(ymin = SDPosAbs-sdGroupAbs, ymax = SDPosAbs+sdGroupAbs), width = 0.1, position = position_jitter(0.1))
