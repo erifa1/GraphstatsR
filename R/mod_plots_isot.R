@@ -56,19 +56,19 @@ mod_plots_isot_ui <- function(id){
         downloadButton(outputId = ns("bars_downloadTAR"), label = "Download PNGs (long process)"),
         downloadButton(outputId = ns("enrc13tab_download"), label = "Download table"),
         plotlyOutput(ns("histo_Aire_enrC13"), height = "800px")
-        )#,
+        ),
 
-      # box(width = 12,
-      #   title = 'EnrC13 / TotalArea preview per specific group or sample :', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
-      #   selectInput(
-      #     ns("level1"),
-      #     label = "Select group for preview:",
-      #     choices = ""
-      #   ),
-      #   downloadButton(outputId = ns("bars_spec_download"), label = "Download PDF (long process)"),
-      #   downloadButton(outputId = ns("bars_spec_downloadTAR"), label = "Download PNGs (long process)"),
-      #   plotlyOutput(ns("histo_Aire_enrC13_allFeat_1group"), height = "800px")
-      # )
+      box(width = 12,
+        title = 'EnrC13 / TotalArea preview per specific group or sample :', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+        selectInput(
+          ns("level1"),
+          label = "Select group for preview:",
+          choices = ""
+        ),
+        downloadButton(outputId = ns("bars_spec_download"), label = "Download PDF (long process)"),
+        downloadButton(outputId = ns("bars_spec_downloadTAR"), label = "Download PNGs (long process)"),
+        plotlyOutput(ns("histo_Aire_enrC13_allFeat_1group"), height = "800px")
+      )
     
       )
   )
@@ -97,15 +97,10 @@ mod_plots_isot_server <- function(id, r = r, session = session){
                             selected = colnames(mtF)[1])
   })
   
-      # observe({
-      #   tt <- r$MeanSD_Area_EnrC13_per_compound
-      #         updateSelectInput(session, "level1",
-      #                           choices = unique(tt[,r_values$newfact]))
-      # })
-
 
     output$sortable1 <- renderUI({
       tabF_melt2 <- tabF_melt <- r$merged2()
+      validate(need(length(input$group1) >= 1, "Select at least one factor") )
 
       if(length(input$group1) == 1){
           r_values$newfact <- input$group1 #r_values$group1ok <- group1ok
@@ -141,6 +136,7 @@ mod_plots_isot_server <- function(id, r = r, session = session){
 
       output$histo_plotly <- renderPlotly({
         req(r$merged2())
+        validate(need(length(input$group1) >= 1, "Select at least one factor") )
         newfact <- r_values$newfact
         mtab <- r_values$tabF_melt2 #r$merged2()
         xform <- list()
@@ -267,9 +263,10 @@ save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = env
 
     output$histo_Aire_enrC13 <- renderPlotly({
       req(reactive_calcul(), r$MeanSD_Area_EnrC13_per_compound, r$MeanSD_Area_EnrC13_per_compound_groups)
+      validate(need(length(input$group1) >= 1, "Select at least one factor") )
       newfact <- r_values$newfact
 
-      if(input$group1 == "sample"){
+      if(length(input$group1) == 1 && input$group1 == "sample"){
 
         tabhisto <- r$MeanSD_Area_EnrC13_per_compound %>% filter(metabolite == input$feat2)
 
@@ -328,51 +325,61 @@ save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = env
 
     })
 
-    # output$histo_Aire_enrC13_allFeat_1group <- renderPlotly({
-    #   req(r$MeanSD_Area_EnrC13_per_compound)
 
-    #   # pour chaque condition  metabolite en x
-    #   MeanSD_Area_EnrC13_per_compound <- r$MeanSD_Area_EnrC13_per_compound
-    #   tabhisto3 <- MeanSD_Area_EnrC13_per_compound %>% filter(!!as.symbol(input$group1) == input$level1)  %>% ungroup() %>% 
-    #       group_by(metabolite) %>% 
-    #       summarise(MeanEnrC13Group = mean(MeanEnrC13, na.rm = TRUE), MeanTotAreaGroup = mean(MeanTotalArea, na.rm = TRUE),
-    #         sdEnrC13Group = sd(MeanEnrC13, na.rm = TRUE), sdTotAreaGroup = sd(MeanTotalArea, na.rm = TRUE))
+      observe({
+        print(r_values$newfact)
+        mtab <- r_values$tabF_melt2
+        save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug2.rdata", envir = environment()); print("SAVE0")
+              updateSelectInput(session, "level1",
+                                choices = unique(mtab[,r_values$newfact]))
+      })
 
-    #   p3_bar_all_feats_1group <- ggplot(tabhisto3, aes(x = metabolite, y = MeanEnrC13Group)) +
-    #         geom_bar(stat="identity", color="black", fill = "#b6bced",
-    #                  position=position_dodge()) + 
-    #           theme_bw() + ylab("EnrC13") +
-    #         theme(legend.position = "None", 
-    #           axis.text.x = element_text(
-    #           angle = 45, hjust=1)) +
-    #         ggtitle(glue::glue("EnrC13 {input$group1} == {input$level1} all metabolites")) +
-    #           geom_errorbar(aes(ymin=MeanEnrC13Group-sdEnrC13Group, ymax=MeanEnrC13Group+sdEnrC13Group), width=.2,
-    #                        position=position_dodge(.9)) 
+    output$histo_Aire_enrC13_allFeat_1group <- renderPlotly({
+      req(r$MeanSD_Area_EnrC13_per_compound)
+      newfact <- r_values$newfact
 
-    #   p4_bar_all_feats_1group <- ggplot(tabhisto3, aes(x = metabolite, y = MeanTotAreaGroup)) +
-    #         geom_bar(stat="identity", color="black", fill = "#b6bced",
-    #                  position=position_dodge()) + 
-    #           theme_bw() + ylab("Total Area") +
-    #         theme(legend.position = "None", 
-    #           axis.text.x = element_text(
-    #           angle = 45, hjust=1)) +
-    #         ggtitle(glue::glue("Total Area {input$group1} == {input$level1} all metabolites")) +
-    #           geom_errorbar(aes(ymin=MeanTotAreaGroup-sdTotAreaGroup, ymax=MeanTotAreaGroup+sdTotAreaGroup), width=.2,
-    #                        position=position_dodge(.9)) 
+        print("DEBUG")
+        print(length(input$group1))
+        validate(need(length(input$group1) >= 1, "Select at least one factor") )
+
+      # pour chaque condition  metabolite en x
+      MeanSD_Area_EnrC13_per_compound <- r$MeanSD_Area_EnrC13_per_compound
+      tabhisto3 <- MeanSD_Area_EnrC13_per_compound %>% filter(!!as.symbol(newfact) == input$level1)  %>% ungroup() %>% 
+          group_by(metabolite) %>% 
+          summarise(MeanEnrC13Group = mean(MeanEnrC13, na.rm = TRUE), MeanTotAreaGroup = mean(MeanTotalArea, na.rm = TRUE),
+            sdEnrC13Group = sd(MeanEnrC13, na.rm = TRUE), sdTotAreaGroup = sd(MeanTotalArea, na.rm = TRUE))
+
+      p3_bar_all_feats_1group <- ggplot(tabhisto3, aes(x = metabolite, y = MeanEnrC13Group)) +
+            geom_bar(stat="identity", color="black", fill = "#b6bced",
+                     position=position_dodge()) + 
+              theme_bw() + ylab("EnrC13") +
+            theme(legend.position = "None", 
+              axis.text.x = element_text(
+              angle = 45, hjust=1)) +
+            ggtitle(glue::glue("EnrC13 {newfact} == {input$level1} all metabolites")) +
+              geom_errorbar(aes(ymin=MeanEnrC13Group-sdEnrC13Group, ymax=MeanEnrC13Group+sdEnrC13Group), width=.2,
+                           position=position_dodge(.9)) 
+
+      p4_bar_all_feats_1group <- ggplot(tabhisto3, aes(x = metabolite, y = MeanTotAreaGroup)) +
+            geom_bar(stat="identity", color="black", fill = "#b6bced",
+                     position=position_dodge()) + 
+              theme_bw() + ylab("Total Area") +
+            theme(legend.position = "None", 
+              axis.text.x = element_text(
+              angle = 45, hjust=1)) +
+            ggtitle(glue::glue("Total Area {newfact} == {input$level1} all metabolites")) +
+              geom_errorbar(aes(ymin=MeanTotAreaGroup-sdTotAreaGroup, ymax=MeanTotAreaGroup+sdTotAreaGroup), width=.2,
+                           position=position_dodge(.9)) 
 
       
-    #   #gridExtra::grid.arrange(p3_bar_all_feats_1group, p4_bar_all_feats_1group, nrow = 2)
+      #gridExtra::grid.arrange(p3_bar_all_feats_1group, p4_bar_all_feats_1group, nrow = 2)
 
-    #   p3_bar_all_feats_1grouply <- ggplotly(p3_bar_all_feats_1group)
-    #   p4_bar_all_feats_1grouply <- ggplotly(p4_bar_all_feats_1group)
+      p3_bar_all_feats_1grouply <- ggplotly(p3_bar_all_feats_1group)
+      p4_bar_all_feats_1grouply <- ggplotly(p4_bar_all_feats_1group)
 
-    #   plotly::subplot(p3_bar_all_feats_1grouply, p4_bar_all_feats_1grouply, nrows = 2, shareX = FALSE, shareY = FALSE, margin = 0.06, heights = c(0.5, 0.5))
+      plotly::subplot(p3_bar_all_feats_1grouply, p4_bar_all_feats_1grouply, nrows = 2, shareX = FALSE, shareY = FALSE, margin = 0.06, heights = c(0.5, 0.5))
 
-
-    # })
-
-        
-
+    })
 
 
 
@@ -606,7 +613,7 @@ save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = env
 
       withProgress({
 
-      if(input$group1 == "sample"){
+      if(length(input$group1) == 1 && input$group1 == "sample"){
         mtab <- MeanSD_Area_EnrC13_per_compound <- r$MeanSD_Area_EnrC13_per_compound
         print(head(mtab))
         
@@ -680,7 +687,7 @@ save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = env
     output$enrc13tab_download <- downloadHandler(
       filename = glue::glue("enrC13_area_table_{as.numeric(Sys.time())}.csv"),
       content = function(file) {
-        if(input$group1 == "sample"){
+        if(length(input$group1) == 1 && input$group1 == "sample"){
           write.csv(r$MeanSD_Area_EnrC13_per_compound, file, quote = FALSE, row.names = FALSE)
         }else{
           write.csv(r$MeanSD_Area_EnrC13_per_compound_groups, file, quote = FALSE, row.names = FALSE)
