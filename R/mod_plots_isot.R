@@ -48,15 +48,15 @@ mod_plots_isot_ui <- function(id){
           downloadButton(outputId = ns("hist_downloadTAR"), label = "Download PNGs (long process)"),
           downloadButton(outputId = ns("isotab_download"), label = "Download Table"),
           plotlyOutput(ns("histo_plotly"))
-        )#,
+        ),
 
-      # box(width = 12,
-      #   title = 'EnrC13 / TotalArea preview:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
-      #   downloadButton(outputId = ns("bars_download"), label = "Download PDF (long process)"),
-      #   downloadButton(outputId = ns("bars_downloadTAR"), label = "Download PNGs (long process)"),
-      #   downloadButton(outputId = ns("enrc13tab_download"), label = "Download table"),
-      #   plotlyOutput(ns("histo_Aire_enrC13"), height = "800px")
-      #   ),
+      box(width = 12,
+        title = 'EnrC13 / TotalArea preview:', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
+        downloadButton(outputId = ns("bars_download"), label = "Download PDF (long process)"),
+        downloadButton(outputId = ns("bars_downloadTAR"), label = "Download PNGs (long process)"),
+        downloadButton(outputId = ns("enrc13tab_download"), label = "Download table"),
+        plotlyOutput(ns("histo_Aire_enrC13"), height = "800px")
+        )#,
 
       # box(width = 12,
       #   title = 'EnrC13 / TotalArea preview per specific group or sample :', status = "warning", solidHeader = TRUE, collapsible = TRUE, collapsed = FALSE,
@@ -97,11 +97,11 @@ mod_plots_isot_server <- function(id, r = r, session = session){
                             selected = colnames(mtF)[1])
   })
   
-      observe({
-        tt <- r$MeanSD_Area_EnrC13_per_compound
-              updateSelectInput(session, "level1",
-                                choices = unique(tt[,input$group1]))
-      })
+      # observe({
+      #   tt <- r$MeanSD_Area_EnrC13_per_compound
+      #         updateSelectInput(session, "level1",
+      #                           choices = unique(tt[,r_values$newfact]))
+      # })
 
 
     output$sortable1 <- renderUI({
@@ -233,98 +233,100 @@ save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = env
         p1
       })
 
-    # reactive_calcul <- reactive({
-    #   req(r$merged2(), input$sorted2, input$group1)
-    #   print("CALCUL")
-    #   mtab <- r$merged2()
+    reactive_calcul <- reactive({
+      req(r_values$tabF_melt2, input$sorted2)
+      print("CALCUL")
+      mtab <- r_values$tabF_melt2
+      newfact <- r_values$newfact
 
-    #   fun <- glue::glue("
-    #   mtab <- mtab %>%
-    #   dplyr::filter({input$group1} %in% input$sorted2) %>%
-    #   droplevels() %>%
-    #   mutate({input$group1} = factor({input$group1}, levels = input$sorted2))
-    #   ")
-    #   eval(parse(text=fun))
+      fun <- glue::glue("
+      mtab <- mtab %>%
+      dplyr::filter({newfact} %in% input$sorted2) %>%
+      droplevels() %>%
+      mutate({newfact} = factor({newfact}, levels = input$sorted2))
+      ")
+      eval(parse(text=fun))
 
-    #   xform <- list()
-    #   CalculPerMerabolite <- mtab %>% group_by(sample) %>% group_by(metabolite, .add = TRUE) %>% 
-    #   mutate(TotArea = sum(corrected_area), CID = 100 * corrected_area / sum(corrected_area), 
-    #   EnrC13 = 100 * sum(Area_Iso)/(max(isotopologue) * sum(corrected_area)))
+      xform <- list()
+      CalculPerMerabolite <- mtab %>% group_by(sample) %>% group_by(metabolite, .add = TRUE) %>% 
+      mutate(TotArea = sum(corrected_area), CID = 100 * corrected_area / sum(corrected_area), 
+      EnrC13 = 100 * sum(Area_Iso)/(max(isotopologue) * sum(corrected_area)))
 
-    #   cols2group <- c(input$group1)
-    #   r$MeanSD_Area_EnrC13_per_compound <- MeanSD_Area_EnrC13_per_compound <- CalculPerMerabolite %>% group_by(across(all_of(cols2group)), .add = TRUE) %>%
-    #       summarise(MeanTotalArea = mean(TotArea), SDTotalArea = sd(TotArea), 
-    #       MeanEnrC13 = mean(EnrC13), SDEnrC13 = sd(EnrC13))
+      cols2group <- c(newfact)
+      r$MeanSD_Area_EnrC13_per_compound <- MeanSD_Area_EnrC13_per_compound <- CalculPerMerabolite %>% group_by(across(all_of(cols2group)), .add = TRUE) %>%
+          summarise(MeanTotalArea = mean(TotArea), SDTotalArea = sd(TotArea), 
+          MeanEnrC13 = mean(EnrC13), SDEnrC13 = sd(EnrC13))
 
-    #   cols2group <- c("metabolite", input$group1)
-    #   r$MeanSD_Area_EnrC13_per_compound_groups <- MeanSD_Area_EnrC13_per_compound_groups <- MeanSD_Area_EnrC13_per_compound %>% ungroup() %>% 
-    #       group_by(across(all_of(cols2group))) %>%
-    #       summarise(MeanGroupArea = mean(MeanTotalArea, na.rm = TRUE), SDTotalArea = sd(MeanTotalArea, na.rm = TRUE), 
-    #       MeanGroupEnrC13 = mean(MeanEnrC13, na.rm = TRUE), SDEnrC13 = sd(MeanEnrC13, na.rm = TRUE))
-    # })
+      cols2group <- c("metabolite", newfact)
+      r$MeanSD_Area_EnrC13_per_compound_groups <- MeanSD_Area_EnrC13_per_compound_groups <- MeanSD_Area_EnrC13_per_compound %>% ungroup() %>% 
+          group_by(across(all_of(cols2group))) %>%
+          summarise(MeanGroupArea = mean(MeanTotalArea, na.rm = TRUE), SDTotalArea = sd(MeanTotalArea, na.rm = TRUE), 
+          MeanGroupEnrC13 = mean(MeanEnrC13, na.rm = TRUE), SDEnrC13 = sd(MeanEnrC13, na.rm = TRUE))
+    })
 
 
-    # output$histo_Aire_enrC13 <- renderPlotly({
-    #   req(reactive_calcul(), r$MeanSD_Area_EnrC13_per_compound, r$MeanSD_Area_EnrC13_per_compound_groups)
+    output$histo_Aire_enrC13 <- renderPlotly({
+      req(reactive_calcul(), r$MeanSD_Area_EnrC13_per_compound, r$MeanSD_Area_EnrC13_per_compound_groups)
+      newfact <- r_values$newfact
 
-    #   if(input$group1 == "sample"){
+      if(input$group1 == "sample"){
 
-    #     tabhisto <- r$MeanSD_Area_EnrC13_per_compound %>% filter(metabolite == input$feat2)
+        tabhisto <- r$MeanSD_Area_EnrC13_per_compound %>% filter(metabolite == input$feat2)
 
-    #     p3_bar <- p3_bar1 <- ggplot(tabhisto, aes(x = sample, y = MeanEnrC13)) +
-    #           geom_bar(stat="identity", color="black", fill = "#b6bced",
-    #                    position=position_dodge()) + 
-    #             theme_bw() + ylab("EnrC13") +
-    #           theme(legend.position = "None", 
-    #             axis.text.x = element_text(
-    #             angle = 45, hjust=1)) +
-    #           ggtitle(glue::glue("EnrC13 {input$feat2} all samples") )
+        p3_bar <- p3_bar1 <- ggplot(tabhisto, aes(x = sample, y = MeanEnrC13)) +
+              geom_bar(stat="identity", color="black", fill = "#b6bced",
+                       position=position_dodge()) + 
+                theme_bw() + ylab("EnrC13") +
+              theme(legend.position = "None", 
+                axis.text.x = element_text(
+                angle = 45, hjust=1)) +
+              ggtitle(glue::glue("EnrC13 {input$feat2} all samples") )
 
-    #     p4_bar <- p4_bar1 <- ggplot(tabhisto, aes(x = sample, y = MeanTotalArea)) +
-    #           geom_bar(stat="identity", color="black", fill = "#b6bced",
-    #                    position=position_dodge()) + 
-    #             theme_bw() + ylab("TotalArea") +
-    #           theme(legend.position = "None", 
-    #             axis.text.x = element_text(
-    #             angle = 45, hjust=1)) +
-    #           ggtitle(glue::glue("TotalArea {input$feat2} all samples") )
+        p4_bar <- p4_bar1 <- ggplot(tabhisto, aes(x = sample, y = MeanTotalArea)) +
+              geom_bar(stat="identity", color="black", fill = "#b6bced",
+                       position=position_dodge()) + 
+                theme_bw() + ylab("TotalArea") +
+              theme(legend.position = "None", 
+                axis.text.x = element_text(
+                angle = 45, hjust=1)) +
+              ggtitle(glue::glue("TotalArea {input$feat2} all samples") )
 
-    #   }else{
+      }else{
 
-    #     tabhisto2 <- r$MeanSD_Area_EnrC13_per_compound_groups %>% filter(metabolite == input$feat2)
+        tabhisto2 <- r$MeanSD_Area_EnrC13_per_compound_groups %>% filter(metabolite == input$feat2)
 
-    #     p3_bar <- p3_bar_group <- ggplot(tabhisto2, aes(x = get(input$group1), y = MeanGroupEnrC13)) +
-    #           geom_bar(stat="identity", color="black", fill = "#b6bced",
-    #                    position=position_dodge()) + 
-    #             theme_bw() + ylab("Mean EnrC13") + xlab(input$group1) +
-    #           theme(legend.position = "None", 
-    #             axis.text.x = element_text(
-    #             angle = 45, hjust=1)) +
-    #           ggtitle(glue::glue("EnrC13 {input$feat2} all groups")) +
-    #             geom_errorbar(aes(ymin=MeanGroupEnrC13-SDEnrC13, ymax=MeanGroupEnrC13+SDEnrC13), width=.2,
-    #                          position=position_dodge(.9)) 
+        p3_bar <- p3_bar_group <- ggplot(tabhisto2, aes(x = get(newfact), y = MeanGroupEnrC13)) +
+              geom_bar(stat="identity", color="black", fill = "#b6bced",
+                       position=position_dodge()) + 
+                theme_bw() + ylab("Mean EnrC13") + xlab(newfact) +
+              theme(legend.position = "None", 
+                axis.text.x = element_text(
+                angle = 45, hjust=1)) +
+              ggtitle(glue::glue("EnrC13 {input$feat2} all groups")) +
+                geom_errorbar(aes(ymin=MeanGroupEnrC13-SDEnrC13, ymax=MeanGroupEnrC13+SDEnrC13), width=.2,
+                             position=position_dodge(.9)) 
 
-    #     p4_bar <- p4_bar_group <- ggplot(tabhisto2, aes(x = get(input$group1), y = MeanGroupArea)) +
-    #           geom_bar(stat="identity", color="black", fill = "#b6bced",
-    #                    position=position_dodge()) + 
-    #             theme_bw() + ylab("Mean TotalArea") + xlab(input$group1) +
-    #           theme(legend.position = "None", 
-    #             axis.text.x = element_text(
-    #             angle = 45, hjust=1)) +
-    #           ggtitle(glue::glue("TotalArea {input$feat2} all groups")) +
-    #             geom_errorbar(aes(ymin=MeanGroupArea-SDTotalArea, ymax=MeanGroupArea+SDTotalArea), width=.2,
-    #                          position=position_dodge(.9)) 
+        p4_bar <- p4_bar_group <- ggplot(tabhisto2, aes(x = get(newfact), y = MeanGroupArea)) +
+              geom_bar(stat="identity", color="black", fill = "#b6bced",
+                       position=position_dodge()) + 
+                theme_bw() + ylab("Mean TotalArea") + xlab(newfact) +
+              theme(legend.position = "None", 
+                axis.text.x = element_text(
+                angle = 45, hjust=1)) +
+              ggtitle(glue::glue("TotalArea {input$feat2} all groups")) +
+                geom_errorbar(aes(ymin=MeanGroupArea-SDTotalArea, ymax=MeanGroupArea+SDTotalArea), width=.2,
+                             position=position_dodge(.9)) 
 
-    #   }
+      }
 
-    #   # gridExtra::grid.arrange(p3_bar, p4_bar, nrow = 2)
+      # gridExtra::grid.arrange(p3_bar, p4_bar, nrow = 2)
 
-    #   p3_barly <- ggplotly(p3_bar)
-    #   p4_barly <- ggplotly(p4_bar)
+      p3_barly <- ggplotly(p3_bar)
+      p4_barly <- ggplotly(p4_bar)
 
-    #   plotly::subplot(p3_barly, p4_barly, nrows = 2, shareX = FALSE, shareY = FALSE, margin = 0.06, heights = c(0.5, 0.5))
+      plotly::subplot(p3_barly, p4_barly, nrows = 2, shareX = FALSE, shareY = FALSE, margin = 0.06, heights = c(0.5, 0.5))
 
-    # })
+    })
 
     # output$histo_Aire_enrC13_allFeat_1group <- renderPlotly({
     #   req(r$MeanSD_Area_EnrC13_per_compound)
