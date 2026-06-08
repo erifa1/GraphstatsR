@@ -141,9 +141,6 @@ mod_plots_isot_server <- function(id, r = r, session = session){
         mtab <- r_values$tabF_melt2 #r$merged2()
         xform <- list()
 
-        tt <- input$sorted2 ###
-        tt2 <- r$merged2()
-save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = environment()); print("SAVE0")
           fun <- glue::glue("
           mtab <- mtab %>%
           dplyr::filter({newfact} %in% input$sorted2) %>%
@@ -329,7 +326,6 @@ save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = env
       observe({
         print(r_values$newfact)
         mtab <- r_values$tabF_melt2
-        save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug2.rdata", envir = environment()); print("SAVE0")
               updateSelectInput(session, "level1",
                                 choices = unique(mtab[,r_values$newfact]))
       })
@@ -609,6 +605,7 @@ save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = env
       cat(file=stderr(), 'All Barplots EnrC13 Area ...', "\n")
       req(r$merged2())
       mtab <- r$merged2()
+      newfact <- r_values$newfact
       LL <- list()
 
       withProgress({
@@ -651,7 +648,7 @@ save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = env
           print(i)
           tabhisto2 <- MeanSD_Area_EnrC13_per_compound_groups %>% filter(metabolite == i)
 
-          LL[[glue::glue("{i}_enrC13")]] <- p3_bar_group <- ggplot(tabhisto2, aes(x = get(input$group1), y = MeanGroupEnrC13)) +
+          LL[[glue::glue("{i}_enrC13")]] <- p3_bar_group <- ggplot(tabhisto2, aes(x = get(newfact), y = MeanGroupEnrC13)) +
                 geom_bar(stat="identity", color="black", fill = "#b6bced",
                          position=position_dodge()) + 
                   theme_bw() + ylab("Mean EnrC13") + xlab("")  + 
@@ -662,7 +659,7 @@ save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = env
                   geom_errorbar(aes(ymin=MeanGroupEnrC13-SDEnrC13, ymax=MeanGroupEnrC13+SDEnrC13), width=.2,
                                position=position_dodge(.9)) 
 
-          LL[[glue::glue("{i}_area")]] <- p4_bar_group <- ggplot(tabhisto2, aes(x = get(input$group1), y = MeanGroupArea)) +
+          LL[[glue::glue("{i}_area")]] <- p4_bar_group <- ggplot(tabhisto2, aes(x = get(newfact), y = MeanGroupArea)) +
                 geom_bar(stat="identity", color="black", fill = "#b6bced",
                          position=position_dodge()) + 
                   theme_bw() + ylab("Mean TotalArea") + xlab("")  +
@@ -741,6 +738,7 @@ save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = env
       pdfall_EnrC13_Area_spec <- reactive({
       cat(file=stderr(), 'All Barplots EnrC13 Area ...', "\n")
       req(r$merged2())
+      newfact <- r_values$newfact
       LL <- list()
 
 
@@ -748,10 +746,10 @@ save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = env
       mtab <- MeanSD_Area_EnrC13_per_compound <- r$MeanSD_Area_EnrC13_per_compound
       # for i in all groups from chosen factor
       withProgress({
-      for(i in levels(as.data.frame(mtab)[,input$group1])) {
-        print(input$group1)
+      for(i in levels(as.data.frame(mtab)[,newfact])) {
+        print(newfact)
         print(i)
-        tabhisto3 <- MeanSD_Area_EnrC13_per_compound %>% filter(!!as.symbol(input$group1) == i)  %>% ungroup() %>% 
+        tabhisto3 <- MeanSD_Area_EnrC13_per_compound %>% filter(!!as.symbol(newfact) == i)  %>% ungroup() %>% 
             group_by(metabolite) %>% 
             summarise(MeanEnrC13Group = mean(MeanEnrC13, na.rm = TRUE), MeanTotAreaGroup = mean(MeanTotalArea, na.rm = TRUE),
               sdEnrC13Group = sd(MeanEnrC13, na.rm = TRUE), sdTotAreaGroup = sd(MeanTotalArea, na.rm = TRUE))
@@ -763,7 +761,7 @@ save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = env
               theme(legend.position = "None", 
                 axis.text.x = element_text(
                 angle = 45, hjust=1)) +
-              ggtitle(glue::glue("EnrC13 {input$group1} == {i} all metabolites")) +
+              ggtitle(glue::glue("EnrC13 {newfact} == {i} all metabolites")) +
                 geom_errorbar(aes(ymin=MeanEnrC13Group-sdEnrC13Group, ymax=MeanEnrC13Group+sdEnrC13Group), width=.2,
                              position=position_dodge(.9)) 
 
@@ -774,7 +772,7 @@ save(list = ls(all.names = TRUE), file = "~/Bureau/tmp/debug.rdata", envir = env
               theme(legend.position = "None", 
                 axis.text.x = element_text(
                 angle = 45, hjust=1)) +
-              ggtitle(glue::glue("Total Area {input$group1} == {i} all metabolites")) +
+              ggtitle(glue::glue("Total Area {newfact} == {i} all metabolites")) +
                 geom_errorbar(aes(ymin=MeanTotAreaGroup-sdTotAreaGroup, ymax=MeanTotAreaGroup+sdTotAreaGroup), width=.2,
                              position=position_dodge(.9))
 

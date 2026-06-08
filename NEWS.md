@@ -1,3 +1,13 @@
+# graphstatsr 2.7.0
+
+**Added Features :**
+
+- Isoplot Module: Allows users to combine factors.
+
+**Improvement:**
+
+- Isoplot Module: Added validation checks to prevent unnecessary warning messages.
+
 # graphstatsr 2.6.1
 
 **Added Features :**
